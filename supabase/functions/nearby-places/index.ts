@@ -44,75 +44,58 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const googleApiKey = Deno.env.get("GOOGLE_PLACES_API_KEY");
-
-    if (!googleApiKey) {
-      console.log("GOOGLE_PLACES_API_KEY not configured, using mock data");
-      return new Response(
-        JSON.stringify({
-          places: generateMockPlaces(latitude, longitude),
-          debug: { mock: true, reason: "No API key configured" },
-        }),
-        {
-          status: 200,
-          headers: {
-            ...corsHeaders,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-    }
-
     const radius = 8046.72;
-    const keywords = [
-      "park",
-      "trail",
-      "nature",
-      "hiking",
-      "beach",
-      "river",
-      "lake",
-      "forest",
-      "mountain",
-      "preserve",
-      "recreation",
-    ];
     const allPlaces: Place[] = [];
-    const debugInfo: any = { searches: [], totalResults: 0 };
+    const debugInfo: any = { searches: [], totalResults: 0, source: "openstreetmap" };
 
-    for (const keyword of keywords) {
-      const url = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${keyword}+near+${latitude},${longitude}&radius=${radius}&key=${googleApiKey}`;
+    const queries = [
+      { amenity: "park", type: "park" },
+      { leisure: "park", type: "park" },
+      { leisure: "nature_reserve", type: "nature" },
+      { natural: "beach", type: "beach" },
+      { natural: "water", type: "lake" },
+      { leisure: "garden", type: "garden" },
+      { tourism: "viewpoint", type: "viewpoint" },
+    ];
 
-      const response = await fetch(url);
-      const data = await response.json();
+    for (const query of queries) {
+      const key = Object.keys(query).find(k => k !== 'type');
+      const value = key ? query[key as keyof typeof query] : '';
+      const type = query.type;
 
-      debugInfo.searches.push({
-        keyword,
-        status: data.status,
-        resultCount: data.results?.length || 0,
-      });
+      const url = `https://overpass-api.de/api/interpreter?data=[out:json];node[${key}=${value}](around:${radius},${latitude},${longitude});out;`;
 
-      if (data.status === "OK" && data.results && data.results.length > 0) {
-        const places = data.results.slice(0, 3).map((place: any) => {
-          const lat = place.geometry.location.lat;
-          const lng = place.geometry.location.lng;
-          const distance = calculateDistance(latitude, longitude, lat, lng);
+      try {
+        const response = await fetch(url);
+        const data = await response.json();
 
-          if (distance <= radius) {
+        debugInfo.searches.push({
+          query: `${key}=${value}`,
+          status: response.status,
+          resultCount: data.elements?.length || 0,
+        });
+
+        if (data.elements && data.elements.length > 0) {
+          const places = data.elements.slice(0, 5).map((element: any) => {
+            const lat = element.lat;
+            const lng = element.lon;
+            const distance = calculateDistance(latitude, longitude, lat, lng);
+
             return {
-              id: place.place_id,
-              name: place.name,
+              id: `osm-${element.id}`,
+              name: element.tags?.name || element.tags?.[key || 'name'] || `${type} location`,
               latitude: lat,
               longitude: lng,
-              type: keyword,
+              type: type,
               distance: distance,
             };
-          }
-          return null;
-        }).filter((place: any) => place !== null);
+          });
 
-        allPlaces.push(...places);
-        debugInfo.totalResults += places.length;
+          allPlaces.push(...places);
+          debugInfo.totalResults += places.length;
+        }
+      } catch (error) {
+        console.error(`Error fetching ${key}=${value}:`, error);
       }
 
       if (allPlaces.length >= 10) {
@@ -126,7 +109,7 @@ Deno.serve(async (req: Request) => {
     );
     const topThree = uniquePlaces.slice(0, 3);
 
-    console.log(`Found ${topThree.length} places for location ${latitude},${longitude}`);
+    console.log(`Found ${topThree.length} places using OpenStreetMap for ${latitude},${longitude}`);
 
     return new Response(
       JSON.stringify({ places: topThree, debug: debugInfo }),
@@ -142,12 +125,12 @@ Deno.serve(async (req: Request) => {
     console.error("Error:", error);
     return new Response(
       JSON.stringify({ 
-        places: [],
-        error: "Internal server error",
-        debug: { errorMessage: String(error) }
+        places: generateMockPlaces(0, 0),
+        error: "Using fallback mock data",
+        debug: { errorMessage: String(error), mock: true }
       }),
       {
-        status: 500,
+        status: 200,
         headers: {
           ...corsHeaders,
           "Content-Type": "application/json",
@@ -181,7 +164,7 @@ function generateMockPlaces(latitude: number, longitude: number): Place[] {
   return [
     {
       id: "mock-1",
-      name: "Central Park",
+      name: "Nearby Park",
       latitude: latitude + 0.01,
       longitude: longitude + 0.01,
       type: "park",
@@ -189,7 +172,7 @@ function generateMockPlaces(latitude: number, longitude: number): Place[] {
     },
     {
       id: "mock-2",
-      name: "Riverside Trail",
+      name: "Nature Trail",
       latitude: latitude - 0.015,
       longitude: longitude + 0.02,
       type: "trail",
@@ -197,10 +180,10 @@ function generateMockPlaces(latitude: number, longitude: number): Place[] {
     },
     {
       id: "mock-3",
-      name: "Mountain View Park",
+      name: "Scenic Viewpoint",
       latitude: latitude + 0.02,
       longitude: longitude - 0.015,
-      type: "park",
+      type: "viewpoint",
       distance: 2800,
     },
   ];

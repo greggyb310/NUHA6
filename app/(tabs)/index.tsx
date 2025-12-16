@@ -27,6 +27,10 @@ export default function HomeScreen() {
   const [debugInfo, setDebugInfo] = useState<DebugInfo | null>(null);
 
   useEffect(() => {
+    if (Platform.OS === 'web') {
+      setLoading(false);
+      return;
+    }
     requestLocationAndFetchPlaces();
   }, []);
 
