@@ -51,11 +51,15 @@ Deno.serve(async (req: Request) => {
     const queries = [
       { amenity: "park", type: "park" },
       { leisure: "park", type: "park" },
-      { leisure: "nature_reserve", type: "nature" },
+      { leisure: "nature_reserve", type: "nature reserve" },
       { natural: "beach", type: "beach" },
       { natural: "water", type: "lake" },
       { leisure: "garden", type: "garden" },
       { tourism: "viewpoint", type: "viewpoint" },
+      { highway: "path", type: "trail" },
+      { highway: "footway", type: "trail" },
+      { highway: "track", type: "trail" },
+      { route: "hiking", type: "hiking trail" },
     ];
 
     for (const query of queries) {
@@ -63,7 +67,7 @@ Deno.serve(async (req: Request) => {
       const value = key ? query[key as keyof typeof query] : '';
       const type = query.type;
 
-      const url = `https://overpass-api.de/api/interpreter?data=[out:json];node[${key}=${value}](around:${radius},${latitude},${longitude});out;`;
+      const url = `https://overpass-api.de/api/interpreter?data=[out:json];(node[${key}=${value}](around:${radius},${latitude},${longitude});way[${key}=${value}](around:${radius},${latitude},${longitude}););out center;`;
 
       try {
         const response = await fetch(url);
@@ -77,19 +81,22 @@ Deno.serve(async (req: Request) => {
 
         if (data.elements && data.elements.length > 0) {
           const places = data.elements.slice(0, 5).map((element: any) => {
-            const lat = element.lat;
-            const lng = element.lon;
+            const lat = element.lat || element.center?.lat;
+            const lng = element.lon || element.center?.lon;
+            
+            if (!lat || !lng) return null;
+            
             const distance = calculateDistance(latitude, longitude, lat, lng);
 
             return {
               id: `osm-${element.id}`,
-              name: element.tags?.name || element.tags?.[key || 'name'] || `${type} location`,
+              name: element.tags?.name || element.tags?.ref || `${type}`,
               latitude: lat,
               longitude: lng,
               type: type,
               distance: distance,
             };
-          });
+          }).filter((place: any) => place !== null);
 
           allPlaces.push(...places);
           debugInfo.totalResults += places.length;
@@ -98,7 +105,7 @@ Deno.serve(async (req: Request) => {
         console.error(`Error fetching ${key}=${value}:`, error);
       }
 
-      if (allPlaces.length >= 10) {
+      if (allPlaces.length >= 15) {
         break;
       }
     }
