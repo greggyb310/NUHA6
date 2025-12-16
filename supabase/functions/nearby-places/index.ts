@@ -47,11 +47,11 @@ Deno.serve(async (req: Request) => {
     const googleApiKey = Deno.env.get("GOOGLE_PLACES_API_KEY");
 
     if (!googleApiKey) {
-      console.error("GOOGLE_PLACES_API_KEY not configured");
+      console.log("GOOGLE_PLACES_API_KEY not configured, using mock data");
       return new Response(
         JSON.stringify({
           places: generateMockPlaces(latitude, longitude),
-          mock: true,
+          debug: { mock: true, reason: "No API key configured" },
         }),
         {
           status: 200,
@@ -64,39 +64,72 @@ Deno.serve(async (req: Request) => {
     }
 
     const radius = 8046.72;
-    const types = ["park", "campground", "natural_feature"];
+    const keywords = [
+      "park",
+      "trail",
+      "nature",
+      "hiking",
+      "beach",
+      "river",
+      "lake",
+      "forest",
+      "mountain",
+      "preserve",
+      "recreation",
+    ];
     const allPlaces: Place[] = [];
+    const debugInfo: any = { searches: [], totalResults: 0 };
 
-    for (const type of types) {
-      const url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${latitude},${longitude}&radius=${radius}&type=${type}&key=${googleApiKey}`;
+    for (const keyword of keywords) {
+      const url = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${keyword}+near+${latitude},${longitude}&radius=${radius}&key=${googleApiKey}`;
 
       const response = await fetch(url);
       const data = await response.json();
 
-      if (data.results && data.results.length > 0) {
-        const places = data.results.slice(0, 5).map((place: any) => ({
-          id: place.place_id,
-          name: place.name,
-          latitude: place.geometry.location.lat,
-          longitude: place.geometry.location.lng,
-          type: type,
-          distance: calculateDistance(
-            latitude,
-            longitude,
-            place.geometry.location.lat,
-            place.geometry.location.lng
-          ),
-        }));
+      debugInfo.searches.push({
+        keyword,
+        status: data.status,
+        resultCount: data.results?.length || 0,
+      });
+
+      if (data.status === "OK" && data.results && data.results.length > 0) {
+        const places = data.results.slice(0, 3).map((place: any) => {
+          const lat = place.geometry.location.lat;
+          const lng = place.geometry.location.lng;
+          const distance = calculateDistance(latitude, longitude, lat, lng);
+
+          if (distance <= radius) {
+            return {
+              id: place.place_id,
+              name: place.name,
+              latitude: lat,
+              longitude: lng,
+              type: keyword,
+              distance: distance,
+            };
+          }
+          return null;
+        }).filter((place: any) => place !== null);
 
         allPlaces.push(...places);
+        debugInfo.totalResults += places.length;
+      }
+
+      if (allPlaces.length >= 10) {
+        break;
       }
     }
 
     allPlaces.sort((a, b) => a.distance - b.distance);
-    const topThree = allPlaces.slice(0, 3);
+    const uniquePlaces = Array.from(
+      new Map(allPlaces.map((place) => [place.id, place])).values()
+    );
+    const topThree = uniquePlaces.slice(0, 3);
+
+    console.log(`Found ${topThree.length} places for location ${latitude},${longitude}`);
 
     return new Response(
-      JSON.stringify({ places: topThree }),
+      JSON.stringify({ places: topThree, debug: debugInfo }),
       {
         status: 200,
         headers: {
@@ -108,7 +141,11 @@ Deno.serve(async (req: Request) => {
   } catch (error) {
     console.error("Error:", error);
     return new Response(
-      JSON.stringify({ error: "Internal server error" }),
+      JSON.stringify({ 
+        places: [],
+        error: "Internal server error",
+        debug: { errorMessage: String(error) }
+      }),
       {
         status: 500,
         headers: {
@@ -155,7 +192,7 @@ function generateMockPlaces(latitude: number, longitude: number): Place[] {
       name: "Riverside Trail",
       latitude: latitude - 0.015,
       longitude: longitude + 0.02,
-      type: "natural_feature",
+      type: "trail",
       distance: 2100,
     },
     {

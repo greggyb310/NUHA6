@@ -12,11 +12,19 @@ interface NaturePlace {
   type: string;
 }
 
+interface DebugInfo {
+  mock?: boolean;
+  reason?: string;
+  searches?: Array<{ keyword: string; status: string; resultCount: number }>;
+  totalResults?: number;
+}
+
 export default function HomeScreen() {
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
   const [places, setPlaces] = useState<NaturePlace[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [debugInfo, setDebugInfo] = useState<DebugInfo | null>(null);
 
   useEffect(() => {
     requestLocationAndFetchPlaces();
@@ -67,8 +75,15 @@ export default function HomeScreen() {
 
       const data = await response.json();
       setPlaces(data.places || []);
+      setDebugInfo(data.debug || null);
+
+      console.log('Places API Response:', {
+        placesCount: data.places?.length || 0,
+        debug: data.debug,
+      });
     } catch (err) {
       console.error('Error fetching places:', err);
+      setError('Failed to fetch nearby places');
     }
   };
 
@@ -154,9 +169,21 @@ export default function HomeScreen() {
           {places.length} {places.length === 1 ? 'place' : 'places'} within 5 miles
         </Text>
         {places.length === 0 && (
-          <Text style={styles.noPlacesText}>
-            No nature spots found nearby. Try a different location.
-          </Text>
+          <>
+            <Text style={styles.noPlacesText}>
+              No nature spots found nearby.
+            </Text>
+            {debugInfo && (
+              <Text style={styles.debugText}>
+                {debugInfo.mock
+                  ? 'Using mock data (API not configured)'
+                  : `Searched ${debugInfo.searches?.length || 0} keywords, found ${debugInfo.totalResults || 0} results`}
+              </Text>
+            )}
+          </>
+        )}
+        {debugInfo?.mock && places.length > 0 && (
+          <Text style={styles.mockBadge}>Mock Data</Text>
         )}
       </View>
     </View>
@@ -232,5 +259,18 @@ const styles = StyleSheet.create({
     color: '#5A6C4A',
     marginTop: 8,
     fontStyle: 'italic',
+  },
+  debugText: {
+    fontSize: 11,
+    color: '#7FA957',
+    marginTop: 4,
+    fontStyle: 'italic',
+  },
+  mockBadge: {
+    fontSize: 10,
+    color: '#7FA957',
+    marginTop: 8,
+    fontWeight: '600',
+    textTransform: 'uppercase',
   },
 });
