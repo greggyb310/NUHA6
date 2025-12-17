@@ -106,13 +106,13 @@ const styles = StyleSheet.create({
     fontSize: 32,
     fontWeight: '600',
     color: '#4A7C2E',
-    marginBottom: 8,
+    marginBottom: 24,
   },
   heroTitle: {
     fontSize: 20,
     fontWeight: '700',
     color: '#2D3E1F',
-    marginBottom: 12,
+    marginBottom: 6,
     textAlign: 'center',
   },
   heroSubtitle: {
