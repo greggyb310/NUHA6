@@ -1,6 +1,6 @@
-import { View, Text, StyleSheet, ActivityIndicator, Image, Dimensions, Animated } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, Image, Dimensions } from 'react-native';
 import { BlurView } from 'expo-blur';
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 
 const { width, height } = Dimensions.get('window');
 
@@ -42,46 +42,22 @@ interface LoadingScreenProps {
 
 export function LoadingScreen({ message, progress }: LoadingScreenProps) {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const [nextImageIndex, setNextImageIndex] = useState(1);
   const [quoteIndex, setQuoteIndex] = useState(0);
-  const topImageOpacity = useRef(new Animated.Value(1)).current;
-  const quoteOpacity = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     const randomStart = Math.floor(Math.random() * NATURE_IMAGES.length);
     setCurrentImageIndex(randomStart);
-    setNextImageIndex((randomStart + 1) % NATURE_IMAGES.length);
     setQuoteIndex(Math.floor(Math.random() * NATURE_QUOTES.length));
   }, []);
 
   useEffect(() => {
     const interval = setInterval(() => {
-      Animated.timing(topImageOpacity, {
-        toValue: 0,
-        duration: 1000,
-        useNativeDriver: true,
-      }).start(() => {
-        setCurrentImageIndex(nextImageIndex);
-        setNextImageIndex((nextImageIndex + 1) % NATURE_IMAGES.length);
-        topImageOpacity.setValue(1);
-      });
-
-      Animated.timing(quoteOpacity, {
-        toValue: 0,
-        duration: 400,
-        useNativeDriver: true,
-      }).start(() => {
-        setQuoteIndex((prevIndex) => (prevIndex + 1) % NATURE_QUOTES.length);
-        Animated.timing(quoteOpacity, {
-          toValue: 1,
-          duration: 400,
-          useNativeDriver: true,
-        }).start();
-      });
+      setCurrentImageIndex((prevIndex) => (prevIndex + 1) % NATURE_IMAGES.length);
+      setQuoteIndex((prevIndex) => (prevIndex + 1) % NATURE_QUOTES.length);
     }, 7000);
 
     return () => clearInterval(interval);
-  }, [topImageOpacity, quoteOpacity, nextImageIndex]);
+  }, []);
 
   return (
     <View style={styles.container}>
@@ -90,20 +66,13 @@ export function LoadingScreen({ message, progress }: LoadingScreenProps) {
         style={styles.backgroundImage}
         resizeMode="cover"
       />
-      <Animated.Image
-        source={NATURE_IMAGES[nextImageIndex]}
-        style={[styles.backgroundImage, { opacity: topImageOpacity }]}
-        resizeMode="cover"
-      />
 
       <BlurView intensity={30} style={styles.overlay}>
         <View style={styles.content}>
-          <Animated.View
-            style={[styles.quoteContainer, { opacity: quoteOpacity }]}
-          >
+          <View style={styles.quoteContainer}>
             <Text style={styles.quote}>"{NATURE_QUOTES[quoteIndex].text}"</Text>
             <Text style={styles.author}>— {NATURE_QUOTES[quoteIndex].author}</Text>
-          </Animated.View>
+          </View>
 
           <View style={styles.loaderContainer}>
             <ActivityIndicator size="large" color="#4A7C2E" />
