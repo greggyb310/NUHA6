@@ -275,7 +275,7 @@ export default function ChatScreen() {
       </View>
       <Text style={styles.emptyTitle}>Welcome to NatureUP</Text>
       <Text style={styles.emptySubtitle}>
-        Your calm, grounded nature-therapy companion. Share how you are feeling or ask for a moment of grounding.
+        What would you like to do today?
       </Text>
       <View style={styles.suggestionContainer}>
         <TouchableOpacity
