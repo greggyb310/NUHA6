@@ -16,7 +16,7 @@ interface Product {
   sort_order: number;
 }
 
-const CATEGORIES = ['All', 'Art', 'Experiences', 'Books'];
+const CATEGORIES = ['All', 'Plants', 'Art', 'Experiences', 'Books'];
 
 export default function ShopScreen() {
   const [products, setProducts] = useState<Product[]>([]);
