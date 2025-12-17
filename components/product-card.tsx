@@ -10,6 +10,19 @@ interface ProductCardProps {
   category: string;
 }
 
+const IMAGE_MAP: Record<string, any> = {
+  'sunrise_above_the_clouds_donner_lake_medium.jpeg': require('@/assets/images/sunrise_above_the_clouds_donner_lake_medium.jpeg'),
+  'star_shaockwaves_medium.jpeg': require('@/assets/images/star_shaockwaves_medium.jpeg'),
+  'snail1_medium.jpeg': require('@/assets/images/snail1_medium.jpeg'),
+  'img_1335_medium.jpeg': require('@/assets/images/img_1335_medium.jpeg'),
+  'img_3495_medium.jpeg': require('@/assets/images/img_3495_medium.jpeg'),
+  'img_6096_large_medium.jpeg': require('@/assets/images/img_6096_large_medium.jpeg'),
+  'img_6448_medium.jpeg': require('@/assets/images/img_6448_medium.jpeg'),
+  'img_6502_medium.jpeg': require('@/assets/images/img_6502_medium.jpeg'),
+  'img_6521_medium.jpeg': require('@/assets/images/img_6521_medium.jpeg'),
+  'img_6583_medium.jpeg': require('@/assets/images/img_6583_medium.jpeg'),
+};
+
 export default function ProductCard({
   title,
   description,
@@ -25,9 +38,11 @@ export default function ProductCard({
     }
   };
 
+  const imageSource = IMAGE_MAP[imageUrl] || IMAGE_MAP['snail1_medium.jpeg'];
+
   return (
     <TouchableOpacity style={styles.card} onPress={handlePress} activeOpacity={0.8}>
-      <Image source={{ uri: imageUrl }} style={styles.image} resizeMode="cover" />
+      <Image source={imageSource} style={styles.image} resizeMode="cover" />
       <View style={styles.content}>
         <View style={styles.header}>
           <Text style={styles.category}>{category}</Text>

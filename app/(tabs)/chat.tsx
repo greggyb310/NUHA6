@@ -148,7 +148,7 @@ export default function CreateScreen() {
         energyLevel,
         weather: weather ? {
           temp: weather.temperature,
-          condition: weather.condition,
+          condition: weather.description,
         } : undefined,
       };
 

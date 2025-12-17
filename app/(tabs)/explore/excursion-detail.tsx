@@ -92,6 +92,10 @@ export default function ExcursionDetailScreen() {
     return <LoadingScreen message="Loading your nature experience..." />;
   }
 
+  if (!excursion) {
+    return <LoadingScreen message="Loading your nature experience..." />;
+  }
+
   const userLocation = userLat && userLng
     ? { lat: parseFloat(userLat), lng: parseFloat(userLng) }
     : null;
