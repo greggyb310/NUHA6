@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, Linking, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
 import { supabase } from '@/services/supabase';
-import { ArrowLeft, MapPin, Clock, Navigation, ChevronDown, ChevronUp } from 'lucide-react-native';
+import { ArrowLeft, MapPin, Clock, Navigation as NavigationIcon, ChevronDown, ChevronUp } from 'lucide-react-native';
 import MapScreen from '@/components/map-screen';
 import { LoadingScreen } from '@/components/loading-screen';
 
@@ -98,6 +98,35 @@ export default function ExcursionDetailScreen() {
 
   const steps = excursion.route_data?.steps || [];
   const previewSteps = stepsExpanded ? steps : steps.slice(0, 3);
+
+  const openDirections = async () => {
+    if (!excursionLocation) {
+      Alert.alert('Location Unavailable', 'This excursion does not have a location set.');
+      return;
+    }
+
+    const { lat, lng } = excursionLocation;
+    const label = encodeURIComponent(excursion.title);
+
+    const url = Platform.select({
+      ios: `maps://app?daddr=${lat},${lng}&q=${label}`,
+      android: `geo:0,0?q=${lat},${lng}(${label})`,
+      default: `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`
+    });
+
+    try {
+      const supported = await Linking.canOpenURL(url);
+      if (supported) {
+        await Linking.openURL(url);
+      } else {
+        const fallbackUrl = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
+        await Linking.openURL(fallbackUrl);
+      }
+    } catch (error) {
+      console.error('Error opening maps:', error);
+      Alert.alert('Error', 'Unable to open directions');
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -246,10 +275,18 @@ export default function ExcursionDetailScreen() {
         )}
 
         <TouchableOpacity
-          style={styles.startButton}
+          style={styles.directionsButton}
+          onPress={openDirections}
+        >
+          <NavigationIcon size={20} color="#FFFFFF" />
+          <Text style={styles.directionsButtonText}>Get Directions</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.secondaryButton}
           onPress={() => router.push('/(tabs)/explore')}
         >
-          <Text style={styles.startButtonText}>View All Excursions</Text>
+          <Text style={styles.secondaryButtonText}>View All Excursions</Text>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
@@ -461,17 +498,35 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     paddingTop: 5,
   },
-  startButton: {
+  directionsButton: {
     backgroundColor: '#4A7C2E',
     marginHorizontal: 20,
     marginTop: 24,
     padding: 16,
     borderRadius: 12,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
   },
-  startButtonText: {
+  directionsButtonText: {
     fontSize: 16,
     fontWeight: '700',
     color: '#FFFFFF',
+  },
+  secondaryButton: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 2,
+    borderColor: '#4A7C2E',
+    marginHorizontal: 20,
+    marginTop: 12,
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  secondaryButtonText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#4A7C2E',
   },
 });
