@@ -146,10 +146,10 @@ async function transcribeAudio(audioBase64: string): Promise<string> {
   }
 
   const audioBuffer = Uint8Array.from(atob(audioBase64), c => c.charCodeAt(0));
-  const audioBlob = new Blob([audioBuffer], { type: 'audio/wav' });
+  const audioBlob = new Blob([audioBuffer], { type: 'audio/m4a' });
 
   const formData = new FormData();
-  formData.append('file', audioBlob, 'audio.wav');
+  formData.append('file', audioBlob, 'audio.m4a');
   formData.append('model', 'whisper-1');
 
   const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
