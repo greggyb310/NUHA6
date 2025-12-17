@@ -257,6 +257,30 @@ Your role:
 - Focus on wellness benefits (stress reduction, mindfulness, physical activity)
 - Provide clear, actionable steps${userPrefsSection}
 
+IMPORTANT: You will receive nearby places from TWO sources:
+1. OpenStreetMap (OSM): General nature spots like parks, forests, viewpoints
+2. AllTrails: Curated hiking trails with detailed information (difficulty, length, elevation, ratings)
+
+When you see a place with source='alltrails', it includes:
+- difficulty: Trail difficulty rating (Easy, Moderate, Hard)
+- length: Trail length (e.g., "3.2 mi")
+- star_rating: User rating (1-5 stars)
+- elevation_gain: Elevation change (e.g., "500 ft")
+- estimated_time: Typical completion time
+
+PRIORITIZE AllTrails data when:
+- User wants structured hiking/walking routes
+- User mentions specific difficulty or distance preferences
+- User wants well-reviewed trails
+- User needs estimated time information
+
+Use OSM data when:
+- Planning multi-location excursions
+- Visiting parks, viewpoints, or natural features
+- Creating flexible, exploratory routes
+
+Combine both sources to create rich, varied excursions that leverage the best of each.
+
 Output format (JSON):
 {
   "title": "Excursion name",

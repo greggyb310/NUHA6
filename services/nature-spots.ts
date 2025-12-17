@@ -3,13 +3,23 @@ import Constants from 'expo-constants';
 
 export interface NatureSpot {
   id: string;
-  osm_id: string;
+  osm_id?: string;
   name: string;
   latitude: number;
   longitude: number;
   type: string;
   tags?: Record<string, unknown>;
   distance?: number;
+  difficulty?: string;
+  length?: string;
+  elevation_gain?: string;
+  estimated_time?: string;
+  star_rating?: number;
+  description?: string;
+  location?: string;
+  url?: string;
+  image_url?: string;
+  source?: 'osm' | 'alltrails';
 }
 
 export interface PlaceSearchResult {
@@ -41,7 +51,8 @@ function calculateDistance(
 export async function searchNatureSpotsNearby(
   latitude: number,
   longitude: number,
-  radiusMiles: number = 5
+  radiusMiles: number = 5,
+  includeTrails: boolean = true
 ): Promise<PlaceSearchResult> {
   const radiusMeters = radiusMiles * 1609.34;
 
@@ -68,6 +79,7 @@ export async function searchNatureSpotsNearby(
             distance,
             latitude: Number(spot.latitude),
             longitude: Number(spot.longitude),
+            source: 'osm' as const,
           };
         })
         .filter((spot) => spot.distance <= radiusMeters)
@@ -85,46 +97,88 @@ export async function searchNatureSpotsNearby(
     const supabaseUrl = Constants.expoConfig?.extra?.EXPO_PUBLIC_SUPABASE_URL || process.env.EXPO_PUBLIC_SUPABASE_URL;
     const supabaseAnonKey = Constants.expoConfig?.extra?.EXPO_PUBLIC_SUPABASE_ANON_KEY || process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
 
-    const response = await fetch(
-      `${supabaseUrl}/functions/v1/nearby-places`,
-      {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${supabaseAnonKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ latitude, longitude }),
-      }
-    );
-
-    if (!response.ok) {
-      throw new Error('Failed to fetch places from API');
-    }
-
-    const data = await response.json();
-    const places: NatureSpot[] = data.places || [];
-
-    for (const place of places) {
-      await supabase
-        .from('nature_spots')
-        .upsert(
-          {
-            osm_id: place.id,
-            name: place.name,
-            latitude: place.latitude,
-            longitude: place.longitude,
-            type: place.type,
-            tags: {},
-            updated_at: new Date().toISOString(),
+    const [osmResponse, alltrailsResponse] = await Promise.allSettled([
+      fetch(
+        `${supabaseUrl}/functions/v1/nearby-places`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${supabaseAnonKey}`,
+            'Content-Type': 'application/json',
           },
-          {
-            onConflict: 'osm_id',
-          }
-        );
+          body: JSON.stringify({ latitude, longitude }),
+        }
+      ),
+      includeTrails ? fetch(
+        `${supabaseUrl}/functions/v1/alltrails-search`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${supabaseAnonKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ latitude, longitude, radiusMiles }),
+        }
+      ) : Promise.resolve(null),
+    ]);
+
+    let osmPlaces: NatureSpot[] = [];
+    let alltrailsPlaces: NatureSpot[] = [];
+
+    if (osmResponse.status === 'fulfilled' && osmResponse.value.ok) {
+      const data = await osmResponse.value.json();
+      osmPlaces = (data.places || []).map((place: any) => ({
+        ...place,
+        source: 'osm' as const,
+      }));
+
+      for (const place of osmPlaces) {
+        await supabase
+          .from('nature_spots')
+          .upsert(
+            {
+              osm_id: place.id,
+              name: place.name,
+              latitude: place.latitude,
+              longitude: place.longitude,
+              type: place.type,
+              tags: {},
+              updated_at: new Date().toISOString(),
+            },
+            {
+              onConflict: 'osm_id',
+            }
+          );
+      }
     }
+
+    if (alltrailsResponse.status === 'fulfilled' && alltrailsResponse.value && alltrailsResponse.value.ok) {
+      const data = await alltrailsResponse.value.json();
+      alltrailsPlaces = (data.trails || []).map((trail: any) => {
+        const distance = calculateDistance(
+          latitude,
+          longitude,
+          trail.latitude,
+          trail.longitude
+        );
+        return {
+          ...trail,
+          distance,
+          source: 'alltrails' as const,
+        };
+      });
+    }
+
+    const combinedPlaces = [...osmPlaces, ...alltrailsPlaces]
+      .sort((a, b) => {
+        if (a.distance === undefined) return 1;
+        if (b.distance === undefined) return -1;
+        return a.distance - b.distance;
+      })
+      .slice(0, 10);
 
     return {
-      places,
+      places: combinedPlaces,
       cached: false,
     };
   } catch (error) {

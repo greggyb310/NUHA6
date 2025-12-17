@@ -14,6 +14,7 @@ import * as Location from 'expo-location';
 import { supabase } from '@/services/supabase';
 import { getCurrentWeather, type WeatherData } from '@/services/weather';
 import { getExcursionPlan } from '@/services/ai';
+import { searchNatureSpotsNearby } from '@/services/nature-spots';
 import { LoadingScreen } from '@/components/loading-screen';
 import MinimalWeather from '@/components/minimal-weather';
 
@@ -195,7 +196,27 @@ export default function CreateScreen() {
         return;
       }
 
-      console.log('User authenticated, calling AI...');
+      console.log('User authenticated, fetching nearby places and trails...');
+      const nearbyResult = await searchNatureSpotsNearby(
+        location.coords.latitude,
+        location.coords.longitude,
+        10,
+        true
+      );
+
+      const nearbyPlaces = nearbyResult.places.map(place => ({
+        name: place.name,
+        lat: place.latitude,
+        lng: place.longitude,
+        type: place.type,
+        source: place.source,
+        difficulty: place.difficulty,
+        length: place.length,
+        star_rating: place.star_rating,
+      }));
+
+      console.log('Found nearby places:', nearbyPlaces.length);
+
       const preferences = {
         activities: selectedActivities,
         therapeutic: selectedTherapeutic,
@@ -208,6 +229,7 @@ export default function CreateScreen() {
         } : undefined,
       };
 
+      console.log('Calling AI to create excursion plan...');
       const result = await getExcursionPlan({
         userLocation: {
           lat: location.coords.latitude,
@@ -215,6 +237,7 @@ export default function CreateScreen() {
         },
         durationMinutes: duration,
         preferences,
+        nearbyPlaces,
       });
 
       console.log('AI result:', result);
