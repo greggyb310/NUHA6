@@ -18,21 +18,21 @@ const NATURE_IMAGES = [
 ];
 
 const NATURE_QUOTES = [
-  "In every walk with nature, one receives far more than they seek.",
-  "Nature does not hurry, yet everything is accomplished.",
-  "The earth has music for those who listen.",
-  "Look deep into nature, and then you will understand everything better.",
-  "Adopt the pace of nature: her secret is patience.",
-  "Nature is not a place to visit. It is home.",
-  "In nature, nothing is perfect and everything is perfect.",
-  "The clearest way into the Universe is through a forest wilderness.",
-  "Nature always wears the colors of the spirit.",
-  "Let nature be your teacher.",
-  "Between every two pines is a doorway to a new world.",
-  "Study nature, love nature, stay close to nature. It will never fail you.",
-  "To sit in the shade on a fine day and look upon verdure is the most perfect refreshment.",
-  "Nature is the art of God.",
-  "Heaven is under our feet as well as over our heads.",
+  { text: "In every walk with nature, one receives far more than they seek.", author: "John Muir" },
+  { text: "Nature does not hurry, yet everything is accomplished.", author: "Lao Tzu" },
+  { text: "The earth has music for those who listen.", author: "George Santayana" },
+  { text: "Look deep into nature, and then you will understand everything better.", author: "Albert Einstein" },
+  { text: "Adopt the pace of nature: her secret is patience.", author: "Ralph Waldo Emerson" },
+  { text: "Nature is not a place to visit. It is home.", author: "Gary Snyder" },
+  { text: "In nature, nothing is perfect and everything is perfect.", author: "Alice Walker" },
+  { text: "The clearest way into the Universe is through a forest wilderness.", author: "John Muir" },
+  { text: "Nature always wears the colors of the spirit.", author: "Ralph Waldo Emerson" },
+  { text: "Let nature be your teacher.", author: "William Wordsworth" },
+  { text: "Between every two pines is a doorway to a new world.", author: "John Muir" },
+  { text: "Study nature, love nature, stay close to nature. It will never fail you.", author: "Frank Lloyd Wright" },
+  { text: "To sit in the shade on a fine day and look upon verdure is the most perfect refreshment.", author: "Jane Austen" },
+  { text: "Nature is the art of God.", author: "Dante Alighieri" },
+  { text: "Heaven is under our feet as well as over our heads.", author: "Henry David Thoreau" },
 ];
 
 interface LoadingScreenProps {
@@ -60,7 +60,8 @@ export function LoadingScreen({ message, progress }: LoadingScreenProps) {
       <BlurView intensity={30} style={styles.overlay}>
         <View style={styles.content}>
           <View style={styles.quoteContainer}>
-            <Text style={styles.quote}>"{NATURE_QUOTES[quoteIndex]}"</Text>
+            <Text style={styles.quote}>"{NATURE_QUOTES[quoteIndex].text}"</Text>
+            <Text style={styles.author}>— {NATURE_QUOTES[quoteIndex].author}</Text>
           </View>
 
           <View style={styles.loaderContainer}>
@@ -126,6 +127,14 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontStyle: 'italic',
     fontWeight: '500',
+  },
+  author: {
+    fontSize: 14,
+    lineHeight: 21,
+    color: '#5A6C4A',
+    textAlign: 'center',
+    fontWeight: '600',
+    marginTop: 8,
   },
   loaderContainer: {
     alignItems: 'center',
