@@ -36,6 +36,7 @@ export default function OnboardingScreen() {
   const [selectedTherapies, setSelectedTherapies] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
 
   const toggleActivity = (activity: string) => {
     if (selectedActivities.includes(activity)) {
@@ -55,6 +56,7 @@ export default function OnboardingScreen() {
 
   const handleComplete = async () => {
     setError(null);
+    setSuccess(false);
     setLoading(true);
 
     const user = await getCurrentUser();
@@ -86,8 +88,12 @@ export default function OnboardingScreen() {
       return;
     }
 
-    router.replace('/(tabs)');
+    setSuccess(true);
     setLoading(false);
+
+    setTimeout(() => {
+      router.replace('/(tabs)');
+    }, 1500);
   };
 
   const handleSkip = () => {
@@ -209,6 +215,12 @@ export default function OnboardingScreen() {
             {error && (
               <View style={styles.errorContainer}>
                 <Text style={styles.errorText}>{error}</Text>
+              </View>
+            )}
+
+            {success && (
+              <View style={styles.successContainer}>
+                <Text style={styles.successText}>Profile saved successfully!</Text>
               </View>
             )}
 
@@ -352,6 +364,17 @@ const styles = StyleSheet.create({
     color: '#DC2626',
     fontSize: 14,
     fontWeight: '500',
+  },
+  successContainer: {
+    backgroundColor: '#D1FAE5',
+    padding: 12,
+    borderRadius: 8,
+  },
+  successText: {
+    color: '#065F46',
+    fontSize: 14,
+    fontWeight: '500',
+    textAlign: 'center',
   },
   buttonContainer: {
     gap: 12,

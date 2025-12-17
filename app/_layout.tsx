@@ -29,10 +29,11 @@ export default function RootLayout() {
     }
 
     const inAuthGroup = segments[0] === '(tabs)';
+    const inOnboarding = segments[0] === 'onboarding';
 
     if (!isAuthenticated && inAuthGroup) {
       router.replace('/sign-in');
-    } else if (isAuthenticated && !inAuthGroup) {
+    } else if (isAuthenticated && !inAuthGroup && !inOnboarding) {
       router.replace('/(tabs)');
     }
   }, [isAuthenticated, segments]);
