@@ -13,9 +13,6 @@ import * as Location from 'expo-location';
 import { supabase } from '@/services/supabase';
 import { getCurrentWeather, type WeatherData } from '@/services/weather';
 import { getExcursionPlan } from '@/services/ai';
-import WeatherCard from '@/components/weather-card';
-import MinimalWeather from '@/components/minimal-weather';
-import MapScreen from '@/components/map-screen';
 import { LoadingScreen } from '@/components/loading-screen';
 
 const ACTIVITY_OPTIONS = [
@@ -234,8 +231,6 @@ export default function CreateScreen() {
       </View>
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
-        <MinimalWeather weather={weather} loading={weatherLoading} />
-
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Activity Preferences</Text>
           <Text style={styles.sectionSubtitle}>Select all that interest you</Text>
@@ -322,18 +317,6 @@ export default function CreateScreen() {
                 </Text>
               </TouchableOpacity>
             ))}
-          </View>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Weather</Text>
-          <WeatherCard weather={weather} loading={weatherLoading} />
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Nearby Nature</Text>
-          <View style={styles.mapContainer}>
-            <MapScreen />
           </View>
         </View>
 
@@ -485,18 +468,6 @@ const styles = StyleSheet.create({
   },
   durationTextSelected: {
     color: '#FFFFFF',
-  },
-  mapContainer: {
-    height: 300,
-    marginHorizontal: 20,
-    borderRadius: 16,
-    overflow: 'hidden',
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
   },
   createButton: {
     marginHorizontal: 20,
