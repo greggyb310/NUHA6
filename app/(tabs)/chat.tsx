@@ -32,6 +32,17 @@ const ACTIVITY_OPTIONS = [
   'Running',
 ];
 
+const THERAPEUTIC_OPTIONS = [
+  'Stress Relief',
+  'Anxiety Reduction',
+  'Mood Enhancement',
+  'Sleep Improvement',
+  'Focus & Clarity',
+  'Energy Boost',
+  'Pain Management',
+  'Mindfulness',
+];
+
 const ENERGY_LEVELS = [
   { value: 'low', label: 'Low', description: 'Gentle pace' },
   { value: 'medium', label: 'Medium', description: 'Moderate activity' },
@@ -49,6 +60,7 @@ const DURATION_OPTIONS = [
 
 export default function CreateScreen() {
   const [selectedActivities, setSelectedActivities] = useState<string[]>([]);
+  const [selectedTherapeutic, setSelectedTherapeutic] = useState<string[]>([]);
   const [energyLevel, setEnergyLevel] = useState<string>('medium');
   const [duration, setDuration] = useState<number>(30);
   const [weather, setWeather] = useState<WeatherData | null>(null);
@@ -144,6 +156,14 @@ export default function CreateScreen() {
     }
   };
 
+  const toggleTherapeutic = (option: string) => {
+    const newOptions = selectedTherapeutic.includes(option)
+      ? selectedTherapeutic.filter(o => o !== option)
+      : [...selectedTherapeutic, option];
+
+    setSelectedTherapeutic(newOptions);
+  };
+
   const handleSendMessage = async () => {
     if (!inputText.trim() || !sessionId || chatLoading) return;
 
@@ -197,6 +217,7 @@ export default function CreateScreen() {
       console.log('User authenticated, calling AI...');
       const preferences = {
         activities: selectedActivities,
+        therapeutic: selectedTherapeutic,
         energyLevel,
         weather: weather ? {
           temp: weather.temperature,
@@ -315,6 +336,33 @@ export default function CreateScreen() {
         </View>
 
         <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Therapeutic Goals</Text>
+          <Text style={styles.sectionSubtitle}>What would you like to focus on?</Text>
+          <View style={styles.chipContainer}>
+            {THERAPEUTIC_OPTIONS.map((option) => (
+              <TouchableOpacity
+                key={option}
+                style={[
+                  styles.chip,
+                  selectedTherapeutic.includes(option) && styles.chipSelected,
+                ]}
+                onPress={() => toggleTherapeutic(option)}
+                activeOpacity={0.7}
+              >
+                <Text
+                  style={[
+                    styles.chipText,
+                    selectedTherapeutic.includes(option) && styles.chipTextSelected,
+                  ]}
+                >
+                  {option}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
+        <View style={styles.section}>
           <Text style={styles.sectionTitle}>Energy Level</Text>
           <Text style={styles.sectionSubtitle}>How much energy do you have today?</Text>
           <View style={styles.energyContainer}>
@@ -416,7 +464,7 @@ export default function CreateScreen() {
                 style={styles.input}
                 value={inputText}
                 onChangeText={setInputText}
-                placeholder="Type a message..."
+                placeholder="Chat with NatureUp."
                 placeholderTextColor="#999"
                 multiline
                 maxLength={500}
