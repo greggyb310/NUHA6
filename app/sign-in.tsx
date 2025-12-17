@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Fingerprint } from 'lucide-react-native';
@@ -97,88 +97,103 @@ export default function SignInScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
+      <View style={styles.logoSection}>
+        <View style={styles.logoContainer}>
+          <Image
+            source={require('@/assets/images/natureup_health_logo_-_green_bkgd.jpeg')}
+            style={styles.logo}
+            resizeMode="contain"
+          />
+        </View>
+      </View>
+
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}
       >
-        <ScrollView contentContainerStyle={styles.scrollContent}>
-          <View style={styles.header}>
-            <Text style={styles.title}>Welcome Back</Text>
-            <Text style={styles.subtitle}>Sign in to continue your wellness journey</Text>
-          </View>
-
-          {biometricEnabled && biometricCapabilities?.isAvailable && (
-            <View style={styles.biometricSection}>
-              <TouchableOpacity
-                style={styles.biometricButton}
-                onPress={handleBiometricSignIn}
-                disabled={loading}
-              >
-                <Fingerprint size={32} color="#4A7C2E" />
-                <Text style={styles.biometricText}>
-                  Sign in with {biometricCapabilities.biometricType}
-                </Text>
-              </TouchableOpacity>
-
-              <View style={styles.divider}>
-                <View style={styles.dividerLine} />
-                <Text style={styles.dividerText}>or</Text>
-                <View style={styles.dividerLine} />
-              </View>
-            </View>
-          )}
-
-          <View style={styles.form}>
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Username</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Enter your username"
-                placeholderTextColor="#5A6C4A"
-                value={username}
-                onChangeText={setUsername}
-                autoCapitalize="none"
-                autoComplete="username"
-                editable={!loading}
-              />
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.centeredContent}>
+            <View style={styles.header}>
+              <Text style={styles.title}>Welcome Back</Text>
+              <Text style={styles.subtitle}>Sign in to continue your wellness journey</Text>
             </View>
 
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Password</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Enter your password"
-                placeholderTextColor="#5A6C4A"
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry
-                autoCapitalize="none"
-                autoComplete="password"
-                editable={!loading}
-              />
-            </View>
+            {biometricEnabled && biometricCapabilities?.isAvailable && (
+              <View style={styles.biometricSection}>
+                <TouchableOpacity
+                  style={styles.biometricButton}
+                  onPress={handleBiometricSignIn}
+                  disabled={loading}
+                >
+                  <Fingerprint size={32} color="#4A7C2E" />
+                  <Text style={styles.biometricText}>
+                    Sign in with {biometricCapabilities.biometricType}
+                  </Text>
+                </TouchableOpacity>
 
-            {error && (
-              <View style={styles.errorContainer}>
-                <Text style={styles.errorText}>{error}</Text>
+                <View style={styles.divider}>
+                  <View style={styles.dividerLine} />
+                  <Text style={styles.dividerText}>or</Text>
+                  <View style={styles.dividerLine} />
+                </View>
               </View>
             )}
 
-            <TouchableOpacity
-              style={[styles.button, loading && styles.buttonDisabled]}
-              onPress={handleSignIn}
-              disabled={loading}
-            >
-              <Text style={styles.buttonText}>
-                {loading ? 'Signing In...' : 'Sign In'}
-              </Text>
-            </TouchableOpacity>
+            <View style={styles.form}>
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Username</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Enter your username"
+                  placeholderTextColor="#5A6C4A"
+                  value={username}
+                  onChangeText={setUsername}
+                  autoCapitalize="none"
+                  autoComplete="username"
+                  editable={!loading}
+                />
+              </View>
 
-            <View style={styles.footer}>
-              <Text style={styles.footerText}>Don't have an account? </Text>
-              <TouchableOpacity onPress={() => router.push('/sign-up')}>
-                <Text style={styles.footerLink}>Sign Up</Text>
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Password</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Enter your password"
+                  placeholderTextColor="#5A6C4A"
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry
+                  autoCapitalize="none"
+                  autoComplete="password"
+                  editable={!loading}
+                />
+              </View>
+
+              {error && (
+                <View style={styles.errorContainer}>
+                  <Text style={styles.errorText}>{error}</Text>
+                </View>
+              )}
+
+              <TouchableOpacity
+                style={[styles.button, loading && styles.buttonDisabled]}
+                onPress={handleSignIn}
+                disabled={loading}
+              >
+                <Text style={styles.buttonText}>
+                  {loading ? 'Signing In...' : 'Sign In'}
+                </Text>
               </TouchableOpacity>
+
+              <View style={styles.footer}>
+                <Text style={styles.footerText}>Don't have an account? </Text>
+                <TouchableOpacity onPress={() => router.push('/sign-up')}>
+                  <Text style={styles.footerLink}>Sign Up</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
         </ScrollView>
@@ -192,14 +207,36 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F5F8F3',
   },
+  logoSection: {
+    alignItems: 'center',
+    paddingTop: 24,
+    paddingBottom: 16,
+  },
+  logoContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 12,
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
+  },
+  logo: {
+    width: '100%',
+    height: '100%',
+  },
   keyboardView: {
     flex: 1,
   },
   scrollContent: {
     flexGrow: 1,
-    justifyContent: 'center',
     paddingHorizontal: 24,
-    paddingVertical: 40,
+    paddingBottom: 60,
+  },
+  centeredContent: {
+    flex: 1,
+    justifyContent: 'center',
+    minHeight: '100%',
   },
   header: {
     marginBottom: 32,
