@@ -5,6 +5,7 @@ import { useLocalSearchParams, router } from 'expo-router';
 import { supabase } from '@/services/supabase';
 import { ArrowLeft, MapPin, Clock, Navigation } from 'lucide-react-native';
 import MapScreen from '@/components/map-screen';
+import { LoadingScreen } from '@/components/loading-screen';
 
 interface Excursion {
   id: string;
@@ -61,16 +62,7 @@ export default function ExcursionDetailScreen() {
   };
 
   if (loading) {
-    return (
-      <SafeAreaView style={styles.container} edges={['top']}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <ArrowLeft size={24} color="#2D3E1F" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Loading...</Text>
-        </View>
-      </SafeAreaView>
-    );
+    return <LoadingScreen message="Loading your nature experience..." />;
   }
 
   if (error || !excursion) {

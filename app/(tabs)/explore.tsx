@@ -11,6 +11,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { supabase } from '@/services/supabase';
+import { LoadingScreen } from '@/components/loading-screen';
 
 interface Excursion {
   id: string;
@@ -75,16 +76,7 @@ export default function ExploreScreen() {
   };
 
   if (loading) {
-    return (
-      <SafeAreaView style={styles.container} edges={['top']}>
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>My Excursions</Text>
-        </View>
-        <View style={styles.centered}>
-          <ActivityIndicator size="large" color="#4A7C2E" />
-        </View>
-      </SafeAreaView>
-    );
+    return <LoadingScreen message="Loading your excursions..." />;
   }
 
   return (

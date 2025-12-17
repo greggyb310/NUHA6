@@ -12,6 +12,7 @@ import {
   disableBiometric,
   BiometricCapabilities,
 } from '@/services/biometric-auth';
+import { LoadingScreen } from '@/components/loading-screen';
 
 const HEALTH_GOALS = [
   'Reduce stress',
@@ -160,14 +161,7 @@ export default function ProfileScreen() {
   };
 
   if (loading) {
-    return (
-      <SafeAreaView style={styles.container} edges={['top']}>
-        <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color="#4A7C2E" />
-          <Text style={styles.loadingText}>Loading profile...</Text>
-        </View>
-      </SafeAreaView>
-    );
+    return <LoadingScreen message="Loading your profile..." />;
   }
 
   return (

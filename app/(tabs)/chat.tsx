@@ -15,6 +15,7 @@ import { getCurrentWeather, type WeatherData } from '@/services/weather';
 import { getExcursionPlan } from '@/services/ai';
 import WeatherCard from '@/components/weather-card';
 import MapScreen from '@/components/map-screen';
+import { LoadingScreen } from '@/components/loading-screen';
 
 const ACTIVITY_OPTIONS = [
   'Walking',
@@ -224,6 +225,9 @@ export default function CreateScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
+      {loading && (
+        <LoadingScreen message="Creating your personalized nature experience..." />
+      )}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Create Excursion</Text>
       </View>
