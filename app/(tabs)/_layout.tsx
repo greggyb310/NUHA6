@@ -1,5 +1,5 @@
 import { Tabs } from 'expo-router';
-import { Home, MessageCircle, User, MapPin } from 'lucide-react-native';
+import { Home, MessageCircle, User, MapPin, ShoppingBag } from 'lucide-react-native';
 
 export default function TabLayout() {
   return (
@@ -37,6 +37,15 @@ export default function TabLayout() {
           title: 'Explore',
           tabBarIcon: ({ size, color }) => (
             <MapPin size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="shop"
+        options={{
+          title: 'Shop',
+          tabBarIcon: ({ size, color }) => (
+            <ShoppingBag size={size} color={color} />
           ),
         }}
       />
