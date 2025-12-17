@@ -9,6 +9,7 @@ import {
   RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { router } from 'expo-router';
 import { supabase } from '@/services/supabase';
 
 interface Excursion {
@@ -20,6 +21,9 @@ interface Excursion {
   difficulty: string | null;
   created_at: string;
   completed_at: string | null;
+  route_data: {
+    start_location?: { lat: number; lng: number };
+  };
 }
 
 export default function ExploreScreen() {
@@ -43,7 +47,7 @@ export default function ExploreScreen() {
 
       const { data, error: dbError } = await supabase
         .from('excursions')
-        .select('id, title, description, duration_minutes, distance_km, difficulty, created_at, completed_at')
+        .select('id, title, description, duration_minutes, distance_km, difficulty, created_at, completed_at, route_data')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
@@ -115,6 +119,17 @@ export default function ExploreScreen() {
               key={excursion.id}
               style={styles.card}
               activeOpacity={0.7}
+              onPress={() => {
+                const location = excursion.route_data?.start_location;
+                router.push({
+                  pathname: '/excursion-detail',
+                  params: {
+                    id: excursion.id,
+                    userLat: location?.lat.toString() || '0',
+                    userLng: location?.lng.toString() || '0',
+                  },
+                });
+              }}
             >
               <View style={styles.cardHeader}>
                 <Text style={styles.cardTitle}>{excursion.title}</Text>

@@ -30,10 +30,11 @@ export default function RootLayout() {
 
     const inAuthGroup = segments[0] === '(tabs)';
     const inOnboarding = segments[0] === 'onboarding';
+    const inExcursionDetail = segments[0] === 'excursion-detail';
 
     if (!isAuthenticated && inAuthGroup) {
       router.replace('/sign-in');
-    } else if (isAuthenticated && !inAuthGroup && !inOnboarding) {
+    } else if (isAuthenticated && !inAuthGroup && !inOnboarding && !inExcursionDetail) {
       router.replace('/(tabs)');
     }
   }, [isAuthenticated, segments]);
@@ -50,6 +51,7 @@ export default function RootLayout() {
         <Stack.Screen name="sign-in" />
         <Stack.Screen name="sign-up" />
         <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="excursion-detail" />
         <Stack.Screen name="+not-found" />
       </Stack>
       <StatusBar style="auto" />
