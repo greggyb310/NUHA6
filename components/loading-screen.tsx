@@ -49,6 +49,15 @@ export function LoadingScreen({ message, progress }: LoadingScreenProps) {
     setQuoteIndex(Math.floor(Math.random() * NATURE_QUOTES.length));
   }, []);
 
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setImageIndex((prevIndex) => (prevIndex + 1) % NATURE_IMAGES.length);
+      setQuoteIndex((prevIndex) => (prevIndex + 1) % NATURE_QUOTES.length);
+    }, 7000);
+
+    return () => clearInterval(interval);
+  }, []);
+
   return (
     <View style={styles.container}>
       <Image
