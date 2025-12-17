@@ -76,7 +76,7 @@ export default function HomeScreen() {
             <View style={styles.featureContent}>
               <Text style={styles.featureTitle}>Create</Text>
               <Text style={styles.featureDescription}>
-                Voice-first wellness guidance and nature therapy recommendations
+                Design a nature therapy excursion
               </Text>
             </View>
           </TouchableOpacity>
