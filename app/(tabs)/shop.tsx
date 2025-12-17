@@ -59,9 +59,6 @@ export default function ShopScreen() {
     ? products
     : products.filter(p => p.category === selectedCategory);
 
-  const featuredProducts = filteredProducts.filter(p => p.featured);
-  const regularProducts = filteredProducts.filter(p => !p.featured);
-
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
@@ -119,46 +116,24 @@ export default function ShopScreen() {
           </View>
         )}
 
-        {products.length === 0 && !error && (
+        {filteredProducts.length === 0 && !error && (
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyText}>No products available at the moment.</Text>
             <Text style={styles.emptySubtext}>Check back soon for curated gear and wellness products!</Text>
           </View>
         )}
 
-        {featuredProducts.length > 0 && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Featured</Text>
-            {featuredProducts.map(product => (
-              <ProductCard
-                key={product.id}
-                title={product.title}
-                description={product.description}
-                imageUrl={product.image_url}
-                affiliateLink={product.affiliate_link}
-                platform={product.platform}
-                category={product.category}
-              />
-            ))}
-          </View>
-        )}
-
-        {regularProducts.length > 0 && (
-          <View style={styles.section}>
-            {featuredProducts.length > 0 && <Text style={styles.sectionTitle}>All Products</Text>}
-            {regularProducts.map(product => (
-              <ProductCard
-                key={product.id}
-                title={product.title}
-                description={product.description}
-                imageUrl={product.image_url}
-                affiliateLink={product.affiliate_link}
-                platform={product.platform}
-                category={product.category}
-              />
-            ))}
-          </View>
-        )}
+        {filteredProducts.map(product => (
+          <ProductCard
+            key={product.id}
+            title={product.title}
+            description={product.description}
+            imageUrl={product.image_url}
+            affiliateLink={product.affiliate_link}
+            platform={product.platform}
+            category={product.category}
+          />
+        ))}
       </ScrollView>
     </SafeAreaView>
   );
@@ -258,15 +233,5 @@ const styles = StyleSheet.create({
     color: '#5A6C4A',
     textAlign: 'center',
     lineHeight: 20,
-  },
-  section: {
-    marginBottom: 16,
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#2D3E1F',
-    marginBottom: 16,
-    marginHorizontal: 16,
   },
 });
