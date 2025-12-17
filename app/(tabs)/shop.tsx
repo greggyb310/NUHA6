@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator, RefreshControl, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/services/supabase';
@@ -16,11 +16,14 @@ interface Product {
   sort_order: number;
 }
 
+const CATEGORIES = ['All', 'Art', 'Experiences', 'Books'];
+
 export default function ShopScreen() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState('All');
 
   const fetchProducts = async () => {
     try {
@@ -52,8 +55,12 @@ export default function ShopScreen() {
     fetchProducts();
   };
 
-  const featuredProducts = products.filter(p => p.featured);
-  const regularProducts = products.filter(p => !p.featured);
+  const filteredProducts = selectedCategory === 'All'
+    ? products
+    : products.filter(p => p.category === selectedCategory);
+
+  const featuredProducts = filteredProducts.filter(p => p.featured);
+  const regularProducts = filteredProducts.filter(p => !p.featured);
 
   if (loading) {
     return (
@@ -75,6 +82,30 @@ export default function ShopScreen() {
         <Text style={styles.headerSubtitle}>
           Curated gear and wellness products for your nature journey
         </Text>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.categoryScrollView}
+          contentContainerStyle={styles.categoryContainer}
+        >
+          {CATEGORIES.map(category => (
+            <TouchableOpacity
+              key={category}
+              style={[
+                styles.categoryButton,
+                selectedCategory === category && styles.categoryButtonActive
+              ]}
+              onPress={() => setSelectedCategory(category)}
+            >
+              <Text style={[
+                styles.categoryButtonText,
+                selectedCategory === category && styles.categoryButtonTextActive
+              ]}>
+                {category}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
       </View>
 
       <ScrollView
@@ -156,6 +187,35 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#5A6C4A',
     lineHeight: 20,
+    marginBottom: 12,
+  },
+  categoryScrollView: {
+    marginTop: 8,
+  },
+  categoryContainer: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingRight: 20,
+  },
+  categoryButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: '#F5F8F3',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  categoryButtonActive: {
+    backgroundColor: '#4A7C2E',
+    borderColor: '#4A7C2E',
+  },
+  categoryButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#5A6C4A',
+  },
+  categoryButtonTextActive: {
+    color: '#FFFFFF',
   },
   scrollView: {
     flex: 1,

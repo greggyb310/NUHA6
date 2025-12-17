@@ -114,7 +114,7 @@ export default function ExploreScreen() {
               onPress={() => {
                 const location = excursion.route_data?.start_location;
                 router.push({
-                  pathname: '/excursion-detail',
+                  pathname: '/(tabs)/explore/excursion-detail',
                   params: {
                     id: excursion.id,
                     userLat: location?.lat.toString() || '0',

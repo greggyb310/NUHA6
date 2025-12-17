@@ -30,7 +30,6 @@ export default function RootLayout() {
 
     const inAuthGroup = segments[0] === '(tabs)';
     const inOnboarding = segments[0] === 'onboarding';
-    const inExcursionDetail = segments[0] === 'excursion-detail';
     const inSignIn = segments[0] === 'sign-in';
     const inSignUp = segments[0] === 'sign-up';
 
@@ -38,7 +37,6 @@ export default function RootLayout() {
       isAuthenticated,
       segments,
       inAuthGroup,
-      inExcursionDetail,
     });
 
     if (!isAuthenticated && inAuthGroup) {
@@ -48,7 +46,6 @@ export default function RootLayout() {
       isAuthenticated &&
       !inAuthGroup &&
       !inOnboarding &&
-      !inExcursionDetail &&
       !inSignIn &&
       !inSignUp &&
       segments.length > 0
@@ -70,7 +67,6 @@ export default function RootLayout() {
         <Stack.Screen name="sign-in" />
         <Stack.Screen name="sign-up" />
         <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="excursion-detail" />
         <Stack.Screen name="+not-found" />
       </Stack>
       <StatusBar style="auto" />

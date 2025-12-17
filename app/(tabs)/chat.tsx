@@ -208,7 +208,7 @@ export default function CreateScreen() {
       console.log('Navigating to detail page...');
       setTimeout(() => {
         router.push({
-          pathname: '/excursion-detail',
+          pathname: '/(tabs)/explore/excursion-detail',
           params: {
             id: insertedData.id,
             userLat: location.coords.latitude.toString(),
