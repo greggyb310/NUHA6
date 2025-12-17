@@ -100,8 +100,14 @@ export default function ExcursionDetailScreen() {
     ? { lat: parseFloat(userLat), lng: parseFloat(userLng) }
     : null;
 
-  const excursionLocation = excursion.route_data?.start_location ||
-    excursion.route_data?.waypoints?.[0];
+  const startLocation = excursion.route_data?.start_location;
+  const waypoints = excursion.route_data?.waypoints || [];
+
+  const excursionLocation = startLocation || waypoints[0];
+
+  const destinationPoint = waypoints.length > 0
+    ? waypoints[Math.floor(waypoints.length / 2)]
+    : excursionLocation;
 
   const getFirstSentence = (text: string): string => {
     const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0);
@@ -112,12 +118,13 @@ export default function ExcursionDetailScreen() {
   const previewSteps = stepsExpanded ? steps : steps.slice(0, 3);
 
   const openDirections = async () => {
-    if (!excursionLocation) {
+    const targetLocation = destinationPoint || excursionLocation;
+    if (!targetLocation) {
       Alert.alert('Location Unavailable', 'This excursion does not have a location set.');
       return;
     }
 
-    const { lat, lng } = excursionLocation;
+    const { lat, lng } = targetLocation;
     const label = encodeURIComponent(excursion.title);
 
     const url = Platform.select({
@@ -158,16 +165,16 @@ export default function ExcursionDetailScreen() {
               initialRegion={{
                 latitude: excursionLocation.lat,
                 longitude: excursionLocation.lng,
-                latitudeDelta: 0.02,
-                longitudeDelta: 0.02,
+                latitudeDelta: 0.04,
+                longitudeDelta: 0.04,
               }}
               showNearbyPlaces={false}
-              destination={{
-                latitude: excursionLocation.lat,
-                longitude: excursionLocation.lng,
+              destination={destinationPoint ? {
+                latitude: destinationPoint.lat,
+                longitude: destinationPoint.lng,
                 title: excursion.title,
-              }}
-              routeWaypoints={excursion.route_data?.waypoints}
+              } : undefined}
+              routeWaypoints={waypoints}
             />
           </View>
         )}

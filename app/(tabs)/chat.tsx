@@ -259,6 +259,32 @@ export default function CreateScreen() {
       const excursionData = result.result;
       console.log('Excursion data:', excursionData);
 
+      const startLat = location.coords.latitude;
+      const startLng = location.coords.longitude;
+      const distanceKm = excursionData.distance_km || (duration / 30) * 2.2;
+
+      const generateNatureRoute = (centerLat: number, centerLng: number, radiusKm: number, points: number = 12) => {
+        const waypoints = [];
+        const radiusInDegrees = radiusKm / 111;
+
+        for (let i = 0; i <= points; i++) {
+          const angle = (i / points) * 2 * Math.PI;
+          const randomVariation = 0.3 + (Math.random() * 0.4);
+          const effectiveRadius = radiusInDegrees * randomVariation;
+
+          const angleVariation = (Math.random() - 0.5) * 0.3;
+          const adjustedAngle = angle + angleVariation;
+
+          const lat = centerLat + (effectiveRadius * Math.cos(adjustedAngle));
+          const lng = centerLng + (effectiveRadius * Math.sin(adjustedAngle) / Math.cos(centerLat * Math.PI / 180));
+          waypoints.push({ lat, lng });
+        }
+
+        return waypoints;
+      };
+
+      const routeWaypoints = generateNatureRoute(startLat, startLng, distanceKm / (2 * Math.PI), 12);
+
       console.log('Saving to database...');
       const { data: insertedData, error: dbError } = await supabase
         .from('excursions')
@@ -269,9 +295,10 @@ export default function CreateScreen() {
           route_data: {
             steps: excursionData.steps,
             start_location: {
-              lat: location.coords.latitude,
-              lng: location.coords.longitude,
+              lat: startLat,
+              lng: startLng,
             },
+            waypoints: routeWaypoints,
           },
           duration_minutes: excursionData.duration_minutes || duration,
           distance_km: excursionData.distance_km,

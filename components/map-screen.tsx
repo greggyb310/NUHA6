@@ -202,26 +202,46 @@ export default function MapScreen({
           />
         ))}
 
-        {destination && (
+        {routeWaypoints && routeWaypoints.length > 0 && (
+          <>
+            <Polyline
+              coordinates={routeWaypoints.map(wp => ({
+                latitude: wp.lat,
+                longitude: wp.lng,
+              }))}
+              strokeColor="#4A7C2E"
+              strokeWidth={3}
+            />
+            {routeWaypoints.map((wp, index) => {
+              const isStart = index === 0;
+              const isEnd = index === routeWaypoints.length - 1;
+              const isMidpoint = index === Math.floor(routeWaypoints.length / 2);
+
+              if (isStart || isEnd || isMidpoint) {
+                const title = isMidpoint ? (destination?.title || 'Destination') : (isStart ? 'Start' : 'End');
+                return (
+                  <Marker
+                    key={`waypoint-${index}`}
+                    coordinate={{ latitude: wp.lat, longitude: wp.lng }}
+                    title={title}
+                    pinColor={isMidpoint ? "#DC2626" : "#4A7C2E"}
+                  />
+                );
+              }
+              return null;
+            })}
+          </>
+        )}
+
+        {destination && (!routeWaypoints || routeWaypoints.length === 0) && (
           <Marker
             coordinate={{
               latitude: destination.latitude,
               longitude: destination.longitude,
             }}
             title={destination.title || 'Destination'}
+            description="Excursion destination"
             pinColor="#DC2626"
-          />
-        )}
-
-        {routeWaypoints && routeWaypoints.length > 0 && (
-          <Polyline
-            coordinates={routeWaypoints.map(wp => ({
-              latitude: wp.lat,
-              longitude: wp.lng,
-            }))}
-            strokeColor="#4A7C2E"
-            strokeWidth={4}
-            lineDashPattern={[1]}
           />
         )}
       </MapView>
