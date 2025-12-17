@@ -77,9 +77,6 @@ export default function HomeScreen() {
           </View>
           <Text style={styles.heroTitle}>NatureUp Health</Text>
           <Text style={styles.welcomeText}>Reconnecting with Awe</Text>
-          <Text style={styles.heroSubtitle}>
-            Your voice-first companion for personalized nature therapy and outdoor wellness
-          </Text>
         </View>
 
         <WeatherCard weather={weather} loading={weatherLoading} />
@@ -157,12 +154,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#4A7C2E',
     marginBottom: 16,
-  },
-  heroSubtitle: {
-    fontSize: 16,
-    color: '#5A6C4A',
-    textAlign: 'center',
-    lineHeight: 24,
   },
   featuresSection: {
     paddingHorizontal: 20,
