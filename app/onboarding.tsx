@@ -25,6 +25,7 @@ const THERAPY_PREFERENCES = [
   'Forest Bathing',
   'Nature Journaling',
   'Reconnect to Awe',
+  'Somatic',
 ];
 
 export default function OnboardingScreen() {
