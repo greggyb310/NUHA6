@@ -16,6 +16,7 @@ const IMAGE_MAP: Record<string, ImageSourcePropType> = {
   'snail1_medium.jpeg': require('@/assets/images/snail1_medium.jpeg'),
   'star_shaockwaves_medium.jpeg': require('@/assets/images/star_shaockwaves_medium.jpeg'),
   'sunrise_above_the_clouds_donner_lake_medium.jpeg': require('@/assets/images/sunrise_above_the_clouds_donner_lake_medium.jpeg'),
+  'natureup_health_logo_-_green_bkgd.jpeg': require('@/assets/images/natureup_health_logo_-_green_bkgd.jpeg'),
 };
 
 interface InspirationPhoto {
@@ -77,7 +78,7 @@ export default function HomeScreen() {
         <View style={styles.heroSection}>
           <View style={styles.logoContainer}>
             <Image
-              source={require('@/assets/images/icon.png')}
+              source={require('@/assets/images/natureup_health_logo_-_green_bkgd.jpeg')}
               style={styles.logo}
               resizeMode="contain"
             />
@@ -167,17 +168,18 @@ const styles = StyleSheet.create({
     paddingBottom: 32,
   },
   logoContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: 'rgba(74, 124, 46, 0.1)',
+    width: 120,
+    height: 120,
+    borderRadius: 16,
+    backgroundColor: '#FFFFFF',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16,
+    overflow: 'hidden',
   },
   logo: {
-    width: 64,
-    height: 64,
+    width: '100%',
+    height: '100%',
   },
   heroTitle: {
     fontSize: 20,
