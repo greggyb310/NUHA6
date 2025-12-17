@@ -343,7 +343,6 @@ export default function CreateScreen() {
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Duration</Text>
-          <Text style={styles.sectionSubtitle}>How long do you want to be outside?</Text>
           <TouchableOpacity
             style={styles.dropdown}
             onPress={() => setShowDurationDropdown(!showDurationDropdown)}
@@ -380,7 +379,6 @@ export default function CreateScreen() {
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Energy Level</Text>
-          <Text style={styles.sectionSubtitle}>How much energy do you have today?</Text>
           <TouchableOpacity
             style={styles.dropdown}
             onPress={() => setShowEnergyDropdown(!showEnergyDropdown)}
@@ -417,7 +415,6 @@ export default function CreateScreen() {
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Risk Tolerance</Text>
-          <Text style={styles.sectionSubtitle}>What level of challenge do you prefer?</Text>
           <TouchableOpacity
             style={styles.dropdown}
             onPress={() => setShowRiskDropdown(!showRiskDropdown)}
@@ -451,7 +448,6 @@ export default function CreateScreen() {
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Activity Preferences</Text>
-          <Text style={styles.sectionSubtitle}>Select all that interest you</Text>
           <TouchableOpacity
             style={styles.dropdown}
             onPress={() => setShowActivityOptions(!showActivityOptions)}
@@ -494,7 +490,6 @@ export default function CreateScreen() {
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Therapeutic Goals</Text>
-          <Text style={styles.sectionSubtitle}>What would you like to focus on?</Text>
           <TouchableOpacity
             style={styles.dropdown}
             onPress={() => setShowTherapeuticOptions(!showTherapeuticOptions)}

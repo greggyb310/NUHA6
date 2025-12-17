@@ -1,6 +1,7 @@
 import { supabase } from './supabase';
 import { aiRun } from './ai-api';
 import { sendVoiceMessage as sendVoiceToApi, base64ToDataUri } from './voice';
+import { getUserProfile } from './user-profile';
 import type { ChatMessage, HealthCoachResult } from '@/types/ai';
 
 export interface ChatSession {
@@ -140,9 +141,26 @@ export async function sendMessage(
     content: msg.content,
   }));
 
+  const { data: { user } } = await supabase.auth.getUser();
+  let userContext = {};
+
+  if (user) {
+    const profile = await getUserProfile(user.id);
+    if (profile) {
+      userContext = {
+        activity_preferences: profile.activity_preferences || [],
+        therapy_preferences: profile.therapy_preferences || [],
+        health_goals: profile.health_goals || [],
+        fitness_level: profile.fitness_level,
+        mobility_level: profile.mobility_level,
+      };
+    }
+  }
+
   const response = await aiRun<HealthCoachResult>({
     action: 'health_coach_message',
     input: { message: userMessage },
+    context: userContext,
     conversation_history: historyForApi,
   });
 
@@ -174,7 +192,23 @@ export async function sendVoiceMessage(
     content: msg.content,
   }));
 
-  const voiceResult = await sendVoiceToApi(recording, historyForApi);
+  const { data: { user } } = await supabase.auth.getUser();
+  let userContext = {};
+
+  if (user) {
+    const profile = await getUserProfile(user.id);
+    if (profile) {
+      userContext = {
+        activity_preferences: profile.activity_preferences || [],
+        therapy_preferences: profile.therapy_preferences || [],
+        health_goals: profile.health_goals || [],
+        fitness_level: profile.fitness_level,
+        mobility_level: profile.mobility_level,
+      };
+    }
+  }
+
+  const voiceResult = await sendVoiceToApi(recording, historyForApi, userContext);
 
   if ('error' in voiceResult) {
     return {

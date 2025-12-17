@@ -14,6 +14,7 @@ interface ChatMessage {
 interface VoiceRequest {
   audio_base64: string;
   conversation_history?: ChatMessage[];
+  user_context?: Record<string, unknown>;
 }
 
 interface VoiceResponse {
@@ -173,13 +174,46 @@ async function transcribeAudio(audioBase64: string): Promise<string> {
   return data.text || '';
 }
 
-async function generateResponse(transcript: string, conversationHistory: ChatMessage[]): Promise<string> {
+async function generateResponse(transcript: string, conversationHistory: ChatMessage[], userContext?: Record<string, unknown>): Promise<string> {
   if (!OPENAI_API_KEY) {
     throw new Error('OPENAI_API_KEY not configured');
   }
 
+  let systemPrompt = NATUREUP_SYSTEM_PROMPT;
+
+  if (userContext) {
+    const activityPrefs = userContext.activity_preferences as string[] || [];
+    const therapyPrefs = userContext.therapy_preferences as string[] || [];
+    const healthGoals = userContext.health_goals as string[] || [];
+    const fitnessLevel = userContext.fitness_level as string || null;
+    const mobilityLevel = userContext.mobility_level as string || null;
+
+    if (activityPrefs.length > 0 || therapyPrefs.length > 0 || healthGoals.length > 0 || fitnessLevel || mobilityLevel) {
+      let userPrefsSection = '\n\nUSER PREFERENCES:\n';
+
+      if (activityPrefs.length > 0) {
+        userPrefsSection += `- Activity preferences: ${activityPrefs.join(', ')}\n`;
+      }
+      if (therapyPrefs.length > 0) {
+        userPrefsSection += `- Therapeutic goals: ${therapyPrefs.join(', ')}\n`;
+      }
+      if (healthGoals.length > 0) {
+        userPrefsSection += `- Health goals: ${healthGoals.join(', ')}\n`;
+      }
+      if (fitnessLevel) {
+        userPrefsSection += `- Fitness level: ${fitnessLevel}\n`;
+      }
+      if (mobilityLevel) {
+        userPrefsSection += `- Mobility level: ${mobilityLevel}\n`;
+      }
+
+      userPrefsSection += '\nTailor your suggestions to align with these preferences when relevant.';
+      systemPrompt += userPrefsSection;
+    }
+  }
+
   const messages: ChatMessage[] = [
-    { role: 'system', content: NATUREUP_SYSTEM_PROMPT },
+    { role: 'system', content: systemPrompt },
     ...conversationHistory,
     { role: 'user', content: transcript },
   ];
@@ -291,7 +325,7 @@ Deno.serve(async (req: Request) => {
 
     const transcript = await transcribeAudio(body.audio_base64);
     const conversationHistory = body.conversation_history || [];
-    const responseText = await generateResponse(transcript, conversationHistory);
+    const responseText = await generateResponse(transcript, conversationHistory, body.user_context);
     const responseAudio = await textToSpeech(responseText);
 
     return jsonResponse({

@@ -122,7 +122,8 @@ async function audioUriToBase64(uri: string): Promise<string> {
 
 export async function sendVoiceMessage(
   recording: VoiceRecording,
-  conversationHistory: ChatMessage[]
+  conversationHistory: ChatMessage[],
+  userContext?: Record<string, unknown>
 ): Promise<VoiceResponse | { error: string }> {
   try {
     const base64Audio = await audioUriToBase64(recording.uri);
@@ -136,6 +137,7 @@ export async function sendVoiceMessage(
       body: JSON.stringify({
         audio_base64: base64Audio,
         conversation_history: conversationHistory,
+        user_context: userContext || {},
       }),
     });
 

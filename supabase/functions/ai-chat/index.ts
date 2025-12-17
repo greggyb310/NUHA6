@@ -163,7 +163,7 @@ const openaiProvider: Provider = {
       throw new Error('OPENAI_API_KEY not configured');
     }
 
-    const systemPrompt = getSystemPrompt(req.action);
+    const systemPrompt = getSystemPrompt(req.action, req.context);
     const messages: ChatMessage[] = [
       { role: 'system', content: systemPrompt },
     ];
@@ -211,10 +211,42 @@ const openaiProvider: Provider = {
   },
 };
 
-function getSystemPrompt(action: AiAction): string {
+function getSystemPrompt(action: AiAction, context?: Record<string, unknown>): string {
+  let userPrefsSection = '';
+
+  if (context) {
+    const activityPrefs = context.activity_preferences as string[] || [];
+    const therapyPrefs = context.therapy_preferences as string[] || [];
+    const healthGoals = context.health_goals as string[] || [];
+    const fitnessLevel = context.fitness_level as string || null;
+    const mobilityLevel = context.mobility_level as string || null;
+
+    if (activityPrefs.length > 0 || therapyPrefs.length > 0 || healthGoals.length > 0 || fitnessLevel || mobilityLevel) {
+      userPrefsSection = '\n\nUSER PREFERENCES:\n';
+
+      if (activityPrefs.length > 0) {
+        userPrefsSection += `- Activity preferences: ${activityPrefs.join(', ')}\n`;
+      }
+      if (therapyPrefs.length > 0) {
+        userPrefsSection += `- Therapeutic goals: ${therapyPrefs.join(', ')}\n`;
+      }
+      if (healthGoals.length > 0) {
+        userPrefsSection += `- Health goals: ${healthGoals.join(', ')}\n`;
+      }
+      if (fitnessLevel) {
+        userPrefsSection += `- Fitness level: ${fitnessLevel}\n`;
+      }
+      if (mobilityLevel) {
+        userPrefsSection += `- Mobility level: ${mobilityLevel}\n`;
+      }
+
+      userPrefsSection += '\nTailor your suggestions to align with these preferences when relevant.';
+    }
+  }
+
   switch (action) {
     case 'health_coach_message':
-      return NATUREUP_SYSTEM_PROMPT;
+      return NATUREUP_SYSTEM_PROMPT + userPrefsSection;
 
     case 'excursion_plan':
       return `You are an AI assistant that creates personalized nature therapy excursions.
@@ -223,7 +255,7 @@ Your role:
 - Design safe, enjoyable outdoor routes
 - Consider user location, nearby places, preferences, and duration
 - Focus on wellness benefits (stress reduction, mindfulness, physical activity)
-- Provide clear, actionable steps
+- Provide clear, actionable steps${userPrefsSection}
 
 Output format (JSON):
 {
@@ -251,7 +283,7 @@ const geminiProvider: Provider = {
       throw new Error('GEMINI_API_KEY not configured');
     }
 
-    const systemPrompt = getSystemPrompt(req.action);
+    const systemPrompt = getSystemPrompt(req.action, req.context);
     const contents: Array<{ role: string; parts: Array<{ text: string }> }> = [];
 
     if (req.conversation_history && req.conversation_history.length > 0) {
