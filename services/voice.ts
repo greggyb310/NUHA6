@@ -56,13 +56,10 @@ export async function startRecording(): Promise<Audio.Recording | null> {
       ios: {
         extension: '.m4a',
         outputFormat: Audio.IOSOutputFormat.MPEG4AAC,
-        audioQuality: Audio.IOSAudioQuality.MEDIUM,
-        sampleRate: 16000,
+        audioQuality: Audio.IOSAudioQuality.LOW,
+        sampleRate: 22050,
         numberOfChannels: 1,
-        bitRate: 64000,
-        linearPCMBitDepth: 16,
-        linearPCMIsBigEndian: false,
-        linearPCMIsFloat: false,
+        bitRate: 32000,
       },
       web: {
         mimeType: 'audio/webm',
