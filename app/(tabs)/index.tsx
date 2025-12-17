@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { MapPin, MessageCircle, Leaf, Heart } from 'lucide-react-native';
+import { MapPin, MessageCircle, Leaf } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import MapScreen from '@/components/map-screen';
 
@@ -29,8 +29,6 @@ export default function HomeScreen() {
         </View>
 
         <View style={styles.featuresSection}>
-          <Text style={styles.sectionTitle}>Get Started</Text>
-
           <TouchableOpacity
             style={styles.featureCard}
             onPress={() => router.push('/(tabs)/chat')}
@@ -60,26 +58,6 @@ export default function HomeScreen() {
               </Text>
             </View>
           </TouchableOpacity>
-        </View>
-
-        <View style={styles.benefitsSection}>
-          <Text style={styles.sectionTitle}>Nature Therapy Benefits</Text>
-          <View style={styles.benefitRow}>
-            <Heart size={20} color="#4A7C2E" />
-            <Text style={styles.benefitText}>Reduces stress and anxiety</Text>
-          </View>
-          <View style={styles.benefitRow}>
-            <Heart size={20} color="#4A7C2E" />
-            <Text style={styles.benefitText}>Improves mood and mental clarity</Text>
-          </View>
-          <View style={styles.benefitRow}>
-            <Heart size={20} color="#4A7C2E" />
-            <Text style={styles.benefitText}>Boosts immune system function</Text>
-          </View>
-          <View style={styles.benefitRow}>
-            <Heart size={20} color="#4A7C2E" />
-            <Text style={styles.benefitText}>Enhances sleep quality</Text>
-          </View>
         </View>
 
         <TouchableOpacity
@@ -134,12 +112,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 24,
   },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#2D3E1F',
-    marginBottom: 16,
-  },
   featureCard: {
     flexDirection: 'row',
     backgroundColor: '#FFFFFF',
@@ -175,25 +147,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#5A6C4A',
     lineHeight: 20,
-  },
-  benefitsSection: {
-    paddingHorizontal: 20,
-    paddingVertical: 24,
-    backgroundColor: '#FFFFFF',
-    marginHorizontal: 20,
-    borderRadius: 16,
-    marginBottom: 24,
-  },
-  benefitRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 8,
-    gap: 12,
-  },
-  benefitText: {
-    fontSize: 15,
-    color: '#2D3E1F',
-    flex: 1,
   },
   ctaButton: {
     flexDirection: 'row',
