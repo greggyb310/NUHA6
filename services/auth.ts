@@ -3,22 +3,29 @@ import { supabase } from './supabase';
 export interface AuthUser {
   id: string;
   email: string;
+  username?: string;
 }
 
 export interface SignUpData {
-  email: string;
+  username: string;
   password: string;
 }
 
 export interface SignInData {
-  email: string;
+  username: string;
   password: string;
+}
+
+function usernameToEmail(username: string): string {
+  return `${username.toLowerCase()}@natureup.local`;
 }
 
 export async function signUp(data: SignUpData): Promise<{ user: AuthUser | null; error: string | null }> {
   try {
+    const email = usernameToEmail(data.username);
+
     const { data: authData, error } = await supabase.auth.signUp({
-      email: data.email,
+      email,
       password: data.password,
     });
 
@@ -30,10 +37,25 @@ export async function signUp(data: SignUpData): Promise<{ user: AuthUser | null;
       return { user: null, error: 'Failed to create account' };
     }
 
+    const { error: profileError } = await supabase
+      .from('user_profiles')
+      .insert({
+        user_id: authData.user.id,
+        username: data.username.toLowerCase(),
+      });
+
+    if (profileError) {
+      if (profileError.code === '23505') {
+        return { user: null, error: 'Username already taken' };
+      }
+      return { user: null, error: 'Failed to create profile' };
+    }
+
     return {
       user: {
         id: authData.user.id,
         email: authData.user.email || '',
+        username: data.username,
       },
       error: null,
     };
@@ -47,23 +69,32 @@ export async function signUp(data: SignUpData): Promise<{ user: AuthUser | null;
 
 export async function signIn(data: SignInData): Promise<{ user: AuthUser | null; error: string | null }> {
   try {
+    const email = usernameToEmail(data.username);
+
     const { data: authData, error } = await supabase.auth.signInWithPassword({
-      email: data.email,
+      email,
       password: data.password,
     });
 
     if (error) {
-      return { user: null, error: error.message };
+      return { user: null, error: 'Invalid username or password' };
     }
 
     if (!authData.user) {
       return { user: null, error: 'Failed to sign in' };
     }
 
+    const { data: profileData } = await supabase
+      .from('user_profiles')
+      .select('username')
+      .eq('user_id', authData.user.id)
+      .single();
+
     return {
       user: {
         id: authData.user.id,
         email: authData.user.email || '',
+        username: profileData?.username || data.username,
       },
       error: null,
     };

@@ -27,11 +27,12 @@ const HEALTH_GOALS = [
 export default function ProfileScreen() {
   const router = useRouter();
   const [name, setName] = useState('');
+  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [selectedGoals, setSelectedGoals] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [biometricCapabilities, setBiometricCapabilities] = useState<BiometricCapabilities | null>(null);
   const [biometricEnabled, setBiometricEnabled] = useState(false);
@@ -51,11 +52,11 @@ export default function ProfileScreen() {
         return;
       }
 
-      setEmail(user.email);
-
       const profile = await getUserProfile(user.id);
 
       if (profile) {
+        setUsername(profile.username || '');
+        setEmail(profile.email || '');
         setName(profile.full_name || '');
         setSelectedGoals(profile.health_goals || []);
       }
@@ -83,7 +84,7 @@ export default function ProfileScreen() {
         return;
       }
 
-      const result = await enableBiometric(email, password);
+      const result = await enableBiometric(username, password);
 
       if (result.success) {
         setBiometricEnabled(true);
@@ -116,6 +117,11 @@ export default function ProfileScreen() {
       return;
     }
 
+    if (email && !email.includes('@')) {
+      setError('Please enter a valid email address');
+      return;
+    }
+
     setSaving(true);
     setError(null);
 
@@ -129,6 +135,7 @@ export default function ProfileScreen() {
 
     const updatedProfile = await updateUserProfile(user.id, {
       full_name: name,
+      email: email || undefined,
       health_goals: selectedGoals,
     });
 
@@ -177,13 +184,33 @@ export default function ProfileScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Basic Information</Text>
           <View style={styles.card}>
-            <Text style={styles.inputLabel}>Display Name</Text>
+            <Text style={styles.inputLabel}>Username</Text>
+            <TextInput
+              style={[styles.input, styles.inputDisabled]}
+              value={username}
+              editable={false}
+              placeholder="Username"
+              placeholderTextColor="#9CA3AF"
+            />
+
+            <Text style={[styles.inputLabel, { marginTop: 16 }]}>Display Name</Text>
             <TextInput
               style={styles.input}
               value={name}
               onChangeText={setName}
               placeholder="Enter your name"
               placeholderTextColor="#9CA3AF"
+            />
+
+            <Text style={[styles.inputLabel, { marginTop: 16 }]}>Email Address</Text>
+            <TextInput
+              style={styles.input}
+              value={email}
+              onChangeText={setEmail}
+              placeholder="Enter your email (optional)"
+              placeholderTextColor="#9CA3AF"
+              keyboardType="email-address"
+              autoCapitalize="none"
             />
           </View>
         </View>
@@ -356,6 +383,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     backgroundColor: '#F5F8F3',
     borderRadius: 12,
+  },
+  inputDisabled: {
+    opacity: 0.6,
+    color: '#5A6C4A',
   },
   goalCard: {
     flexDirection: 'row',

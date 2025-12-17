@@ -65,17 +65,17 @@ export async function authenticateWithBiometrics(): Promise<{ success: boolean; 
   return { success: false, error: 'Authentication failed' };
 }
 
-export async function saveCredentialsForBiometric(email: string, password: string): Promise<void> {
+export async function saveCredentialsForBiometric(username: string, password: string): Promise<void> {
   if (Platform.OS === 'web') {
     return;
   }
 
-  const credentials = JSON.stringify({ email, password });
+  const credentials = JSON.stringify({ username, password });
   await SecureStore.setItemAsync(CREDENTIALS_KEY, credentials);
   await SecureStore.setItemAsync(BIOMETRIC_ENABLED_KEY, 'true');
 }
 
-export async function getStoredCredentials(): Promise<{ email: string; password: string } | null> {
+export async function getStoredCredentials(): Promise<{ username: string; password: string } | null> {
   if (Platform.OS === 'web') {
     return null;
   }
@@ -110,7 +110,7 @@ export async function disableBiometric(): Promise<void> {
   await SecureStore.deleteItemAsync(BIOMETRIC_ENABLED_KEY);
 }
 
-export async function enableBiometric(email: string, password: string): Promise<{ success: boolean; error?: string }> {
+export async function enableBiometric(username: string, password: string): Promise<{ success: boolean; error?: string }> {
   const capabilities = await getBiometricCapabilities();
 
   if (!capabilities.isAvailable) {
@@ -123,7 +123,7 @@ export async function enableBiometric(email: string, password: string): Promise<
     return { success: false, error: authResult.error };
   }
 
-  await saveCredentialsForBiometric(email, password);
+  await saveCredentialsForBiometric(username, password);
 
   return { success: true };
 }

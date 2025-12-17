@@ -3,6 +3,8 @@ import { supabase } from './supabase';
 export interface UserProfile {
   id: string;
   user_id: string;
+  username: string | null;
+  email: string | null;
   full_name: string | null;
   health_goals: string[] | null;
   preferences: Record<string, unknown> | null;
@@ -53,6 +55,7 @@ export async function updateUserProfile(
   userId: string,
   updates: {
     full_name?: string;
+    email?: string;
     health_goals?: string[];
     preferences?: Record<string, unknown>;
   }

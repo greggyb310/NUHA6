@@ -6,7 +6,7 @@ import { signUp } from '@/services/auth';
 
 export default function SignUpScreen() {
   const router = useRouter();
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -15,8 +15,13 @@ export default function SignUpScreen() {
   const handleSignUp = async () => {
     setError(null);
 
-    if (!email || !password) {
+    if (!username || !password) {
       setError('Please fill in all fields');
+      return;
+    }
+
+    if (username.length < 3) {
+      setError('Username must be at least 3 characters');
       return;
     }
 
@@ -32,7 +37,7 @@ export default function SignUpScreen() {
 
     setLoading(true);
 
-    const { user, error: signUpError } = await signUp({ email, password });
+    const { user, error: signUpError } = await signUp({ username, password });
 
     if (signUpError) {
       setError(signUpError);
@@ -61,16 +66,15 @@ export default function SignUpScreen() {
 
           <View style={styles.form}>
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Email</Text>
+              <Text style={styles.label}>Username</Text>
               <TextInput
                 style={styles.input}
-                placeholder="Enter your email"
+                placeholder="Choose a username"
                 placeholderTextColor="#5A6C4A"
-                value={email}
-                onChangeText={setEmail}
+                value={username}
+                onChangeText={setUsername}
                 autoCapitalize="none"
-                keyboardType="email-address"
-                autoComplete="email"
+                autoComplete="username"
                 editable={!loading}
               />
             </View>

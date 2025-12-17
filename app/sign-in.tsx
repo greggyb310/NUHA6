@@ -14,7 +14,7 @@ import {
 
 export default function SignInScreen() {
   const router = useRouter();
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -73,14 +73,14 @@ export default function SignInScreen() {
   const handleSignIn = async () => {
     setError(null);
 
-    if (!email || !password) {
+    if (!username || !password) {
       setError('Please fill in all fields');
       return;
     }
 
     setLoading(true);
 
-    const { user, error: signInError } = await signIn({ email, password });
+    const { user, error: signInError } = await signIn({ username, password });
 
     if (signInError) {
       setError(signInError);
@@ -130,16 +130,15 @@ export default function SignInScreen() {
 
           <View style={styles.form}>
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Email</Text>
+              <Text style={styles.label}>Username</Text>
               <TextInput
                 style={styles.input}
-                placeholder="Enter your email"
+                placeholder="Enter your username"
                 placeholderTextColor="#5A6C4A"
-                value={email}
-                onChangeText={setEmail}
+                value={username}
+                onChangeText={setUsername}
                 autoCapitalize="none"
-                keyboardType="email-address"
-                autoComplete="email"
+                autoComplete="username"
                 editable={!loading}
               />
             </View>
