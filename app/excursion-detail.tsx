@@ -33,7 +33,6 @@ export default function ExcursionDetailScreen() {
   const [error, setError] = useState<string | null>(null);
   const [descriptionExpanded, setDescriptionExpanded] = useState(false);
   const [stepsExpanded, setStepsExpanded] = useState(false);
-  const [locationExpanded, setLocationExpanded] = useState(false);
 
   useEffect(() => {
     loadExcursion();
@@ -91,9 +90,9 @@ export default function ExcursionDetailScreen() {
   const excursionLocation = excursion.route_data?.start_location ||
     excursion.route_data?.waypoints?.[0];
 
-  const getDescriptionPreview = (text: string, maxLength: number = 120) => {
-    if (text.length <= maxLength) return text;
-    return text.substring(0, maxLength).trim() + '...';
+  const getDescriptionBulletPoints = (text: string): string[] => {
+    const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0);
+    return sentences.slice(0, 3).map(s => s.trim());
   };
 
   const steps = excursion.route_data?.steps || [];
@@ -144,53 +143,6 @@ export default function ExcursionDetailScreen() {
           <MapScreen />
         </View>
 
-        <TouchableOpacity
-          style={styles.locationCard}
-          onPress={() => setLocationExpanded(!locationExpanded)}
-          activeOpacity={0.7}
-        >
-          <View style={styles.cardHeader}>
-            <MapPin size={18} color="#4A7C2E" />
-            <Text style={styles.cardTitle}>Location Details</Text>
-            {locationExpanded ? (
-              <ChevronUp size={20} color="#5A6C4A" />
-            ) : (
-              <ChevronDown size={20} color="#5A6C4A" />
-            )}
-          </View>
-
-          {locationExpanded && (
-            <>
-              <View style={styles.locationRow}>
-                <View style={styles.locationInfo}>
-                  <Text style={styles.locationLabel}>Your Location</Text>
-                  {userLocation ? (
-                    <Text style={styles.locationCoords}>
-                      {userLocation.lat.toFixed(4)}, {userLocation.lng.toFixed(4)}
-                    </Text>
-                  ) : (
-                    <Text style={styles.locationCoords}>Not available</Text>
-                  )}
-                </View>
-              </View>
-
-              {excursionLocation && (
-                <>
-                  <View style={styles.divider} />
-                  <View style={styles.locationRow}>
-                    <View style={styles.locationInfo}>
-                      <Text style={styles.locationLabel}>Excursion Start</Text>
-                      <Text style={styles.locationCoords}>
-                        {excursionLocation.lat.toFixed(4)}, {excursionLocation.lng.toFixed(4)}
-                      </Text>
-                    </View>
-                  </View>
-                </>
-              )}
-            </>
-          )}
-        </TouchableOpacity>
-
         <View style={styles.metricsCard}>
           {excursion.duration_minutes && (
             <View style={styles.metricItem}>
@@ -216,28 +168,34 @@ export default function ExcursionDetailScreen() {
         </View>
 
         {excursion.description && (
-          <View style={styles.descriptionCard}>
+          <TouchableOpacity
+            style={styles.descriptionCard}
+            onPress={() => setDescriptionExpanded(!descriptionExpanded)}
+            activeOpacity={0.9}
+          >
             <View style={styles.cardHeader}>
               <Text style={styles.cardTitle}>About</Text>
+              {descriptionExpanded ? (
+                <ChevronUp size={20} color="#5A6C4A" />
+              ) : (
+                <ChevronDown size={20} color="#5A6C4A" />
+              )}
             </View>
-            <Text style={styles.description}>
-              {descriptionExpanded
-                ? excursion.description
-                : getDescriptionPreview(excursion.description)
-              }
-            </Text>
-            {excursion.description.length > 120 && (
-              <TouchableOpacity
-                style={styles.expandButton}
-                onPress={() => setDescriptionExpanded(!descriptionExpanded)}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.expandButtonText}>
-                  {descriptionExpanded ? 'Show less' : 'Read more'}
-                </Text>
-              </TouchableOpacity>
+            {descriptionExpanded ? (
+              <Text style={styles.description}>
+                {excursion.description}
+              </Text>
+            ) : (
+              <View>
+                {getDescriptionBulletPoints(excursion.description).map((bullet, index) => (
+                  <View key={index} style={styles.bulletItem}>
+                    <View style={styles.bulletDot} />
+                    <Text style={styles.bulletText}>{bullet}</Text>
+                  </View>
+                ))}
+              </View>
             )}
-          </View>
+          </TouchableOpacity>
         )}
 
         {steps.length > 0 && (
@@ -340,18 +298,6 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#D1D5DB',
   },
-  locationCard: {
-    backgroundColor: '#FFFFFF',
-    marginHorizontal: 20,
-    marginTop: 16,
-    padding: 16,
-    borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
   cardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -363,31 +309,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: '#2D3E1F',
-  },
-  locationRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    marginTop: 8,
-  },
-  locationInfo: {
-    flex: 1,
-  },
-  locationLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#2D3E1F',
-    marginBottom: 4,
-  },
-  locationCoords: {
-    fontSize: 12,
-    color: '#5A6C4A',
-    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
-  },
-  divider: {
-    height: 1,
-    backgroundColor: '#E5E7EB',
-    marginVertical: 12,
   },
   metricsCard: {
     flexDirection: 'row',
@@ -446,6 +367,25 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   description: {
+    fontSize: 14,
+    color: '#5A6C4A',
+    lineHeight: 21,
+  },
+  bulletItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 8,
+    gap: 10,
+  },
+  bulletDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#4A7C2E',
+    marginTop: 7,
+  },
+  bulletText: {
+    flex: 1,
     fontSize: 14,
     color: '#5A6C4A',
     lineHeight: 21,
