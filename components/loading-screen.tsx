@@ -57,7 +57,7 @@ export function LoadingScreen({ message, progress }: LoadingScreenProps) {
         resizeMode="cover"
       />
 
-      <BlurView intensity={60} style={styles.overlay}>
+      <BlurView intensity={30} style={styles.overlay}>
         <View style={styles.content}>
           <View style={styles.quoteContainer}>
             <Text style={styles.quote}>"{NATURE_QUOTES[quoteIndex]}"</Text>
