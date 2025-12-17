@@ -73,6 +73,8 @@ export default function CreateScreen() {
   const [showRiskDropdown, setShowRiskDropdown] = useState(false);
   const [showEnergyDropdown, setShowEnergyDropdown] = useState(false);
   const [showDurationDropdown, setShowDurationDropdown] = useState(false);
+  const [showActivityOptions, setShowActivityOptions] = useState(false);
+  const [showTherapeuticOptions, setShowTherapeuticOptions] = useState(false);
   const [weather, setWeather] = useState<WeatherData | null>(null);
   const [weatherLoading, setWeatherLoading] = useState(true);
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
@@ -450,55 +452,87 @@ export default function CreateScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Activity Preferences</Text>
           <Text style={styles.sectionSubtitle}>Select all that interest you</Text>
-          <View style={styles.chipContainer}>
-            {ACTIVITY_OPTIONS.map((activity) => (
-              <TouchableOpacity
-                key={activity}
-                style={[
-                  styles.chip,
-                  selectedActivities.includes(activity) && styles.chipSelected,
-                ]}
-                onPress={() => toggleActivity(activity)}
-                activeOpacity={0.7}
-              >
-                <Text
-                  style={[
-                    styles.chipText,
-                    selectedActivities.includes(activity) && styles.chipTextSelected,
-                  ]}
-                >
-                  {activity}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+          <TouchableOpacity
+            style={styles.dropdown}
+            onPress={() => setShowActivityOptions(!showActivityOptions)}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.dropdownText}>
+              {selectedActivities.length > 0
+                ? `${selectedActivities.length} selected: ${selectedActivities.slice(0, 2).join(', ')}${selectedActivities.length > 2 ? '...' : ''}`
+                : 'Tap to select activities'}
+            </Text>
+            <Text style={styles.dropdownArrow}>{showActivityOptions ? '▲' : '▼'}</Text>
+          </TouchableOpacity>
+          {showActivityOptions && (
+            <View style={styles.expandedSection}>
+              <View style={styles.chipContainer}>
+                {ACTIVITY_OPTIONS.map((activity) => (
+                  <TouchableOpacity
+                    key={activity}
+                    style={[
+                      styles.chip,
+                      selectedActivities.includes(activity) && styles.chipSelected,
+                    ]}
+                    onPress={() => toggleActivity(activity)}
+                    activeOpacity={0.7}
+                  >
+                    <Text
+                      style={[
+                        styles.chipText,
+                        selectedActivities.includes(activity) && styles.chipTextSelected,
+                      ]}
+                    >
+                      {activity}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          )}
         </View>
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Therapeutic Goals</Text>
           <Text style={styles.sectionSubtitle}>What would you like to focus on?</Text>
-          <View style={styles.chipContainer}>
-            {THERAPEUTIC_OPTIONS.map((option) => (
-              <TouchableOpacity
-                key={option}
-                style={[
-                  styles.chip,
-                  selectedTherapeutic.includes(option) && styles.chipSelected,
-                ]}
-                onPress={() => toggleTherapeutic(option)}
-                activeOpacity={0.7}
-              >
-                <Text
-                  style={[
-                    styles.chipText,
-                    selectedTherapeutic.includes(option) && styles.chipTextSelected,
-                  ]}
-                >
-                  {option}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+          <TouchableOpacity
+            style={styles.dropdown}
+            onPress={() => setShowTherapeuticOptions(!showTherapeuticOptions)}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.dropdownText}>
+              {selectedTherapeutic.length > 0
+                ? `${selectedTherapeutic.length} selected: ${selectedTherapeutic.slice(0, 2).join(', ')}${selectedTherapeutic.length > 2 ? '...' : ''}`
+                : 'Tap to select goals'}
+            </Text>
+            <Text style={styles.dropdownArrow}>{showTherapeuticOptions ? '▲' : '▼'}</Text>
+          </TouchableOpacity>
+          {showTherapeuticOptions && (
+            <View style={styles.expandedSection}>
+              <View style={styles.chipContainer}>
+                {THERAPEUTIC_OPTIONS.map((option) => (
+                  <TouchableOpacity
+                    key={option}
+                    style={[
+                      styles.chip,
+                      selectedTherapeutic.includes(option) && styles.chipSelected,
+                    ]}
+                    onPress={() => toggleTherapeutic(option)}
+                    activeOpacity={0.7}
+                  >
+                    <Text
+                      style={[
+                        styles.chipText,
+                        selectedTherapeutic.includes(option) && styles.chipTextSelected,
+                      ]}
+                    >
+                      {option}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          )}
         </View>
 
         {error && (
@@ -623,7 +657,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
-    paddingHorizontal: 20,
   },
   chip: {
     paddingHorizontal: 16,
@@ -690,6 +723,10 @@ const styles = StyleSheet.create({
   dropdownItemTextSelected: {
     color: '#4A7C2E',
     fontWeight: '700',
+  },
+  expandedSection: {
+    marginTop: 12,
+    paddingHorizontal: 20,
   },
   createButton: {
     marginHorizontal: 20,
