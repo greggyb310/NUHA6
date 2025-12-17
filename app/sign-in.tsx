@@ -198,7 +198,8 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     justifyContent: 'center',
-    padding: 24,
+    paddingHorizontal: 24,
+    paddingVertical: 40,
   },
   header: {
     marginBottom: 32,
@@ -275,7 +276,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   biometricSection: {
-    paddingHorizontal: 24,
     marginBottom: 16,
   },
   biometricButton: {
