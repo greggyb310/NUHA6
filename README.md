@@ -19,6 +19,21 @@ The app requires the following Supabase secrets to be configured:
 OPENAI_API_KEY=your_openai_api_key
 ```
 
+### Security Configuration
+
+Complete these additional security settings in the Supabase Dashboard:
+
+1. **Enable Leaked Password Protection**
+   - Go to Authentication > Settings
+   - Enable "Check for leaked passwords (HaveIBeenPwned)"
+   - This prevents users from using compromised passwords
+
+2. **Auth Database Connection Strategy**
+   - Go to Project Settings > Database > Connection Pooling
+   - Set Auth server to use percentage-based connection allocation
+   - Recommended: 5-10% of total connections
+   - This ensures Auth scales with instance size
+
 ## Development
 
 ```bash
