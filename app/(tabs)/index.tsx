@@ -91,6 +91,18 @@ export default function HomeScreen() {
     }
   };
 
+  if (Platform.OS === 'web') {
+    return (
+      <View style={styles.centerContainer}>
+        <MapPin size={48} color="#4A7C2E" />
+        <Text style={styles.webMessage}>NatureUP Health is iOS-only</Text>
+        <Text style={styles.webSubtext}>
+          Preview this app on your iPhone using launch.expo.dev
+        </Text>
+      </View>
+    );
+  }
+
   if (loading) {
     return (
       <View style={styles.centerContainer}>
@@ -112,18 +124,6 @@ export default function HomeScreen() {
     return (
       <View style={styles.centerContainer}>
         <Text style={styles.errorText}>Unable to get location</Text>
-      </View>
-    );
-  }
-
-  if (Platform.OS === 'web') {
-    return (
-      <View style={styles.centerContainer}>
-        <MapPin size={48} color="#4A7C2E" />
-        <Text style={styles.webMessage}>Map view is only available on iOS</Text>
-        <Text style={styles.webSubtext}>
-          Preview this app on your iPhone using launch.expo.dev
-        </Text>
       </View>
     );
   }
