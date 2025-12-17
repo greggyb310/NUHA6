@@ -50,10 +50,12 @@ export default function MapScreen({
   useEffect(() => {
     if (showNearbyPlaces) {
       requestLocationAndFetchPlaces();
-    } else {
+    } else if (!initialRegion) {
       requestLocationOnly();
+    } else {
+      setLoading(false);
     }
-  }, [showNearbyPlaces]);
+  }, [showNearbyPlaces, initialRegion]);
 
   const requestLocationOnly = async () => {
     try {
@@ -148,7 +150,7 @@ export default function MapScreen({
     );
   }
 
-  if (!location) {
+  if (!location && !initialRegion) {
     return (
       <View style={styles.centerContainer}>
         <Text style={styles.errorText}>Unable to get location</Text>
@@ -156,12 +158,17 @@ export default function MapScreen({
     );
   }
 
-  const mapRegion = initialRegion || {
+  const mapRegion = initialRegion || (location ? {
     latitude: location.coords.latitude,
     longitude: location.coords.longitude,
     latitudeDelta: 0.1,
     longitudeDelta: 0.1,
-  };
+  } : {
+    latitude: 0,
+    longitude: 0,
+    latitudeDelta: 0.1,
+    longitudeDelta: 0.1,
+  });
 
   return (
     <View style={styles.container}>
@@ -173,10 +180,10 @@ export default function MapScreen({
         showsPointsOfInterest={true}
         showsBuildings={true}
         initialRegion={mapRegion}
-        showsUserLocation={true}
-        showsMyLocationButton={true}
+        showsUserLocation={!!location}
+        showsMyLocationButton={!!location}
       >
-        {showNearbyPlaces && (
+        {showNearbyPlaces && location && (
           <Circle
             center={{
               latitude: location.coords.latitude,
