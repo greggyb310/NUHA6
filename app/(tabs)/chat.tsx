@@ -311,7 +311,7 @@ export default function CreateScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       {loading && (
-        <LoadingScreen message="Creating your personalized nature experience..." />
+        <LoadingScreen message="Creating your personalized nature experience... This might take a minute..." />
       )}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Create Excursion</Text>
