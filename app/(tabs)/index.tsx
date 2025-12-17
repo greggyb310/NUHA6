@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { MapPin, MessageCircle } from 'lucide-react-native';
+import { MapPin, MessageCircle, Leaf } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import * as Location from 'expo-location';
 import WeatherCard from '@/components/weather-card';
@@ -69,11 +69,7 @@ export default function HomeScreen() {
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.heroSection}>
           <View style={styles.logoContainer}>
-            <Image
-              source={require('@/assets/images/natureup_health_logo_-_green_bkgd.jpeg')}
-              style={styles.logo}
-              resizeMode="contain"
-            />
+            <Leaf size={48} color="#4A7C2E" />
           </View>
           <Text style={styles.heroTitle}>NatureUp Health</Text>
           <Text style={styles.welcomeText}>Reconnecting with Awe</Text>
@@ -135,12 +131,10 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    overflow: 'hidden',
+    backgroundColor: 'rgba(74, 124, 46, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
     marginBottom: 16,
-  },
-  logo: {
-    width: '100%',
-    height: '100%',
   },
   heroTitle: {
     fontSize: 20,
