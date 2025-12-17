@@ -1,4 +1,5 @@
 import { Audio } from 'expo-av';
+import * as FileSystem from 'expo-file-system/legacy';
 import { Platform } from 'react-native';
 import type { ChatMessage } from '@/types/ai';
 
@@ -91,12 +92,12 @@ async function audioUriToBase64(uri: string): Promise<string> {
       reader.onerror = reject;
       reader.readAsDataURL(blob);
     });
-  } else {
-    const { File } = await import('expo-file-system/next');
-    const file = new File(uri);
-    const base64 = await file.base64();
-    return base64;
   }
+
+  // iOS/Android: Recording.getURI() returns a file:// URI. FileSystem can read it directly.
+  return FileSystem.readAsStringAsync(uri, {
+    encoding: FileSystem.EncodingType.Base64,
+  });
 }
 
 export async function sendVoiceMessage(
