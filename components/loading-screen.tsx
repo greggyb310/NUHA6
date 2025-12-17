@@ -1,6 +1,7 @@
 import { View, Text, StyleSheet, ActivityIndicator, Image, Dimensions } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { useEffect, useState } from 'react';
+import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 
 const { width, height } = Dimensions.get('window');
 
@@ -60,18 +61,26 @@ export function LoadingScreen({ message, progress }: LoadingScreenProps) {
 
   return (
     <View style={styles.container}>
-      <Image
+      <Animated.Image
+        key={imageIndex}
         source={NATURE_IMAGES[imageIndex]}
         style={styles.backgroundImage}
         resizeMode="cover"
+        entering={FadeIn.duration(1000)}
+        exiting={FadeOut.duration(1000)}
       />
 
       <BlurView intensity={30} style={styles.overlay}>
         <View style={styles.content}>
-          <View style={styles.quoteContainer}>
+          <Animated.View
+            key={quoteIndex}
+            style={styles.quoteContainer}
+            entering={FadeIn.duration(800)}
+            exiting={FadeOut.duration(800)}
+          >
             <Text style={styles.quote}>"{NATURE_QUOTES[quoteIndex].text}"</Text>
             <Text style={styles.author}>— {NATURE_QUOTES[quoteIndex].author}</Text>
-          </View>
+          </Animated.View>
 
           <View style={styles.loaderContainer}>
             <ActivityIndicator size="large" color="#4A7C2E" />
@@ -118,7 +127,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
   },
   quoteContainer: {
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    backgroundColor: 'rgba(255, 255, 255, 0.66)',
     borderRadius: 16,
     padding: 24,
     marginBottom: 48,
