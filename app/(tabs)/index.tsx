@@ -1,9 +1,22 @@
 import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, ActivityIndicator, ImageSourcePropType } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MapPin, MessageCircle, Leaf } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '@/services/supabase';
+
+const IMAGE_MAP: Record<string, ImageSourcePropType> = {
+  'img_1335_medium.jpeg': require('@/assets/images/img_1335_medium.jpeg'),
+  'img_3495_medium.jpeg': require('@/assets/images/img_3495_medium.jpeg'),
+  'img_6096_large_medium.jpeg': require('@/assets/images/img_6096_large_medium.jpeg'),
+  'img_6448_medium.jpeg': require('@/assets/images/img_6448_medium.jpeg'),
+  'img_6502_medium.jpeg': require('@/assets/images/img_6502_medium.jpeg'),
+  'img_6521_medium.jpeg': require('@/assets/images/img_6521_medium.jpeg'),
+  'img_6583_medium.jpeg': require('@/assets/images/img_6583_medium.jpeg'),
+  'snail1_medium.jpeg': require('@/assets/images/snail1_medium.jpeg'),
+  'star_shaockwaves_medium.jpeg': require('@/assets/images/star_shaockwaves_medium.jpeg'),
+  'sunrise_above_the_clouds_donner_lake_medium.jpeg': require('@/assets/images/sunrise_above_the_clouds_donner_lake_medium.jpeg'),
+};
 
 interface InspirationPhoto {
   id: string;
@@ -75,10 +88,10 @@ export default function HomeScreen() {
           </View>
         ) : (
           <>
-            {photo && (
+            {photo && IMAGE_MAP[photo.image_url] && (
               <View style={styles.photoCard}>
                 <Image
-                  source={{ uri: photo.image_url }}
+                  source={IMAGE_MAP[photo.image_url]}
                   style={styles.photo}
                   resizeMode="cover"
                 />
