@@ -1,66 +1,60 @@
 import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MapPin, MessageCircle, Leaf } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
-import * as Location from 'expo-location';
-import WeatherCard from '@/components/weather-card';
-import { getCurrentWeather, WeatherData } from '@/services/weather';
-import { searchNatureSpotsNearby, NatureSpot } from '@/services/nature-spots';
+import { supabase } from '@/services/supabase';
+
+interface InspirationPhoto {
+  id: string;
+  image_url: string;
+  photographer: string | null;
+  alt_text: string | null;
+}
+
+interface InspirationQuote {
+  id: string;
+  quote_text: string;
+  author: string | null;
+}
 
 export default function HomeScreen() {
   const router = useRouter();
-  const [weather, setWeather] = useState<WeatherData | null>(null);
-  const [weatherLoading, setWeatherLoading] = useState(false);
-  const [natureSpots, setNatureSpots] = useState<NatureSpot[]>([]);
-  const [spotsLoading, setSpotsLoading] = useState(false);
+  const [photo, setPhoto] = useState<InspirationPhoto | null>(null);
+  const [quote, setQuote] = useState<InspirationQuote | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchLocationData();
+    fetchInspiration();
   }, []);
 
-  const fetchLocationData = async () => {
-    if (Platform.OS === 'web') {
-      setWeather({
-        temperature: 72,
-        feelsLike: 70,
-        description: 'Perfect weather for outdoor activities',
-        humidity: 65,
-        windSpeed: 8,
-        icon: '01d',
-        location: 'Demo Location',
-      });
-      return;
-    }
-
+  const fetchInspiration = async () => {
     try {
-      setWeatherLoading(true);
-      setSpotsLoading(true);
+      setLoading(true);
 
-      const { status } = await Location.requestForegroundPermissionsAsync();
+      const { data: photos } = await supabase
+        .from('inspiration_photos')
+        .select('*')
+        .eq('active', true);
 
-      if (status !== 'granted') {
-        console.log('Location permission denied');
-        setWeatherLoading(false);
-        setSpotsLoading(false);
-        return;
+      const { data: quotes } = await supabase
+        .from('inspiration_quotes')
+        .select('*')
+        .eq('active', true);
+
+      if (photos && photos.length > 0) {
+        const randomPhoto = photos[Math.floor(Math.random() * photos.length)];
+        setPhoto(randomPhoto);
       }
 
-      const location = await Location.getCurrentPositionAsync({});
-      const { latitude, longitude } = location.coords;
-
-      const [weatherData, spotsResult] = await Promise.all([
-        getCurrentWeather(latitude, longitude),
-        searchNatureSpotsNearby(latitude, longitude, 5)
-      ]);
-
-      setWeather(weatherData);
-      setNatureSpots(spotsResult.places.slice(0, 3));
+      if (quotes && quotes.length > 0) {
+        const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
+        setQuote(randomQuote);
+      }
     } catch (error) {
-      console.error('Error fetching location data:', error);
+      console.error('Error fetching inspiration:', error);
     } finally {
-      setWeatherLoading(false);
-      setSpotsLoading(false);
+      setLoading(false);
     }
   };
 
@@ -75,7 +69,35 @@ export default function HomeScreen() {
           <Text style={styles.welcomeText}>Reconnecting with Awe</Text>
         </View>
 
-        <WeatherCard weather={weather} loading={weatherLoading} />
+        {loading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#4A7C2E" />
+          </View>
+        ) : (
+          <>
+            {photo && (
+              <View style={styles.photoCard}>
+                <Image
+                  source={{ uri: photo.image_url }}
+                  style={styles.photo}
+                  resizeMode="cover"
+                />
+                {photo.photographer && (
+                  <Text style={styles.photoCredit}>Photo by {photo.photographer}</Text>
+                )}
+              </View>
+            )}
+
+            {quote && (
+              <View style={styles.quoteCard}>
+                <Text style={styles.quoteText}>"{quote.quote_text}"</Text>
+                {quote.author && (
+                  <Text style={styles.quoteAuthor}>— {quote.author}</Text>
+                )}
+              </View>
+            )}
+          </>
+        )}
 
         <View style={styles.featuresSection}>
           <TouchableOpacity
@@ -103,7 +125,7 @@ export default function HomeScreen() {
             <View style={styles.featureContent}>
               <Text style={styles.featureTitle}>Explore</Text>
               <Text style={styles.featureDescription}>
-                Discover parks, trails, and outdoor spaces near you
+                Discover outdoor spaces near you
               </Text>
             </View>
           </TouchableOpacity>
@@ -148,6 +170,63 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#4A7C2E',
     marginBottom: 16,
+  },
+  loadingContainer: {
+    marginHorizontal: 20,
+    marginBottom: 24,
+    padding: 40,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    alignItems: 'center',
+  },
+  photoCard: {
+    marginHorizontal: 20,
+    marginBottom: 24,
+    borderRadius: 16,
+    overflow: 'hidden',
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  photo: {
+    width: '100%',
+    height: 240,
+  },
+  photoCredit: {
+    fontSize: 11,
+    color: '#9CA3AF',
+    padding: 12,
+    textAlign: 'right',
+  },
+  quoteCard: {
+    marginHorizontal: 20,
+    marginBottom: 24,
+    padding: 24,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    borderLeftWidth: 4,
+    borderLeftColor: '#4A7C2E',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  quoteText: {
+    fontSize: 16,
+    lineHeight: 26,
+    color: '#2D3E1F',
+    fontStyle: 'italic',
+    marginBottom: 12,
+  },
+  quoteAuthor: {
+    fontSize: 14,
+    color: '#5A6C4A',
+    fontWeight: '600',
+    textAlign: 'right',
   },
   featuresSection: {
     paddingHorizontal: 20,
