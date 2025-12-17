@@ -39,7 +39,7 @@ export default function HomeScreen() {
               <MessageCircle size={28} color="#4A7C2E" />
             </View>
             <View style={styles.featureContent}>
-              <Text style={styles.featureTitle}>AI Health Coach</Text>
+              <Text style={styles.featureTitle}>Create</Text>
               <Text style={styles.featureDescription}>
                 Voice-first wellness guidance and nature therapy recommendations
               </Text>
@@ -54,7 +54,7 @@ export default function HomeScreen() {
               <MapPin size={28} color="#4A7C2E" />
             </View>
             <View style={styles.featureContent}>
-              <Text style={styles.featureTitle}>Explore Nature Spots</Text>
+              <Text style={styles.featureTitle}>Explore</Text>
               <Text style={styles.featureDescription}>
                 Discover parks, trails, and outdoor spaces near you
               </Text>
