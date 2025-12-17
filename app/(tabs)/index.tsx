@@ -146,7 +146,7 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   welcomeText: {
-    fontSize: 36,
+    fontSize: 28,
     fontWeight: '600',
     color: '#4A7C2E',
     marginBottom: 24,
