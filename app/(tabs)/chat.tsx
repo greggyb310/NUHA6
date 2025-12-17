@@ -14,6 +14,7 @@ import { supabase } from '@/services/supabase';
 import { getCurrentWeather, type WeatherData } from '@/services/weather';
 import { getExcursionPlan } from '@/services/ai';
 import WeatherCard from '@/components/weather-card';
+import MinimalWeather from '@/components/minimal-weather';
 import MapScreen from '@/components/map-screen';
 import { LoadingScreen } from '@/components/loading-screen';
 
