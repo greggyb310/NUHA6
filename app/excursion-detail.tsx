@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform } from '
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
 import { supabase } from '@/services/supabase';
-import { ArrowLeft, MapPin, Clock, Navigation } from 'lucide-react-native';
+import { ArrowLeft, MapPin, Clock, Navigation, ChevronDown, ChevronUp } from 'lucide-react-native';
 import MapScreen from '@/components/map-screen';
 import { LoadingScreen } from '@/components/loading-screen';
 
@@ -31,6 +31,9 @@ export default function ExcursionDetailScreen() {
   const [excursion, setExcursion] = useState<Excursion | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [descriptionExpanded, setDescriptionExpanded] = useState(false);
+  const [stepsExpanded, setStepsExpanded] = useState(false);
+  const [locationExpanded, setLocationExpanded] = useState(false);
 
   useEffect(() => {
     loadExcursion();
@@ -88,6 +91,14 @@ export default function ExcursionDetailScreen() {
   const excursionLocation = excursion.route_data?.start_location ||
     excursion.route_data?.waypoints?.[0];
 
+  const getDescriptionPreview = (text: string, maxLength: number = 120) => {
+    if (text.length <= maxLength) return text;
+    return text.substring(0, maxLength).trim() + '...';
+  };
+
+  const steps = excursion.route_data?.steps || [];
+  const previewSteps = stepsExpanded ? steps : steps.slice(0, 3);
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
@@ -104,36 +115,52 @@ export default function ExcursionDetailScreen() {
           <MapScreen />
         </View>
 
-        <View style={styles.locationCard}>
-          <View style={styles.locationRow}>
-            <MapPin size={20} color="#4A7C2E" />
-            <View style={styles.locationInfo}>
-              <Text style={styles.locationLabel}>Your Location</Text>
-              {userLocation ? (
-                <Text style={styles.locationCoords}>
-                  {userLocation.lat.toFixed(4)}, {userLocation.lng.toFixed(4)}
-                </Text>
-              ) : (
-                <Text style={styles.locationCoords}>Not available</Text>
-              )}
-            </View>
+        <TouchableOpacity
+          style={styles.locationCard}
+          onPress={() => setLocationExpanded(!locationExpanded)}
+          activeOpacity={0.7}
+        >
+          <View style={styles.cardHeader}>
+            <MapPin size={18} color="#4A7C2E" />
+            <Text style={styles.cardTitle}>Location Details</Text>
+            {locationExpanded ? (
+              <ChevronUp size={20} color="#5A6C4A" />
+            ) : (
+              <ChevronDown size={20} color="#5A6C4A" />
+            )}
           </View>
 
-          {excursionLocation && (
+          {locationExpanded && (
             <>
-              <View style={styles.divider} />
               <View style={styles.locationRow}>
-                <Navigation size={20} color="#7FA957" />
                 <View style={styles.locationInfo}>
-                  <Text style={styles.locationLabel}>Excursion Start</Text>
-                  <Text style={styles.locationCoords}>
-                    {excursionLocation.lat.toFixed(4)}, {excursionLocation.lng.toFixed(4)}
-                  </Text>
+                  <Text style={styles.locationLabel}>Your Location</Text>
+                  {userLocation ? (
+                    <Text style={styles.locationCoords}>
+                      {userLocation.lat.toFixed(4)}, {userLocation.lng.toFixed(4)}
+                    </Text>
+                  ) : (
+                    <Text style={styles.locationCoords}>Not available</Text>
+                  )}
                 </View>
               </View>
+
+              {excursionLocation && (
+                <>
+                  <View style={styles.divider} />
+                  <View style={styles.locationRow}>
+                    <View style={styles.locationInfo}>
+                      <Text style={styles.locationLabel}>Excursion Start</Text>
+                      <Text style={styles.locationCoords}>
+                        {excursionLocation.lat.toFixed(4)}, {excursionLocation.lng.toFixed(4)}
+                      </Text>
+                    </View>
+                  </View>
+                </>
+              )}
             </>
           )}
-        </View>
+        </TouchableOpacity>
 
         <View style={styles.metricsCard}>
           {excursion.duration_minutes && (
@@ -161,22 +188,60 @@ export default function ExcursionDetailScreen() {
 
         {excursion.description && (
           <View style={styles.descriptionCard}>
-            <Text style={styles.sectionTitle}>About This Excursion</Text>
-            <Text style={styles.description}>{excursion.description}</Text>
+            <View style={styles.cardHeader}>
+              <Text style={styles.cardTitle}>About</Text>
+            </View>
+            <Text style={styles.description}>
+              {descriptionExpanded
+                ? excursion.description
+                : getDescriptionPreview(excursion.description)
+              }
+            </Text>
+            {excursion.description.length > 120 && (
+              <TouchableOpacity
+                style={styles.expandButton}
+                onPress={() => setDescriptionExpanded(!descriptionExpanded)}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.expandButtonText}>
+                  {descriptionExpanded ? 'Show less' : 'Read more'}
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
         )}
 
-        {excursion.route_data?.steps && excursion.route_data.steps.length > 0 && (
+        {steps.length > 0 && (
           <View style={styles.stepsCard}>
-            <Text style={styles.sectionTitle}>Planned Activities</Text>
-            {excursion.route_data.steps.map((step, index) => (
+            <View style={styles.cardHeader}>
+              <Text style={styles.cardTitle}>
+                Activities ({steps.length})
+              </Text>
+            </View>
+            {previewSteps.map((step, index) => (
               <View key={index} style={styles.stepItem}>
                 <View style={styles.stepNumber}>
                   <Text style={styles.stepNumberText}>{index + 1}</Text>
                 </View>
-                <Text style={styles.stepText}>{step}</Text>
+                <Text style={styles.stepText} numberOfLines={stepsExpanded ? undefined : 2}>
+                  {step}
+                </Text>
               </View>
             ))}
+            {steps.length > 3 && (
+              <TouchableOpacity
+                style={styles.expandButton}
+                onPress={() => setStepsExpanded(!stepsExpanded)}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.expandButtonText}>
+                  {stepsExpanded
+                    ? 'Show less'
+                    : `Show ${steps.length - 3} more activities`
+                  }
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
         )}
 
@@ -250,10 +315,23 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 12,
+  },
+  cardTitle: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#2D3E1F',
+  },
   locationRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
+    marginTop: 8,
   },
   locationInfo: {
     flex: 1,
@@ -330,16 +408,20 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#2D3E1F',
-    marginBottom: 12,
-  },
   description: {
     fontSize: 14,
     color: '#5A6C4A',
-    lineHeight: 22,
+    lineHeight: 21,
+  },
+  expandButton: {
+    marginTop: 12,
+    paddingVertical: 8,
+    alignItems: 'center',
+  },
+  expandButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#4A7C2E',
   },
   stepsCard: {
     backgroundColor: '#FFFFFF',
@@ -356,7 +438,7 @@ const styles = StyleSheet.create({
   stepItem: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    marginBottom: 12,
+    marginBottom: 8,
     gap: 12,
   },
   stepNumber: {
@@ -374,10 +456,10 @@ const styles = StyleSheet.create({
   },
   stepText: {
     flex: 1,
-    fontSize: 14,
+    fontSize: 13,
     color: '#5A6C4A',
-    lineHeight: 20,
-    paddingTop: 4,
+    lineHeight: 18,
+    paddingTop: 5,
   },
   startButton: {
     backgroundColor: '#4A7C2E',
