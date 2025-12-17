@@ -13,8 +13,14 @@
       "bundleIdentifier": "com.natureup.nearbyapp",
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "This app needs your location to show nearby nature spots on the map.",
-        "NSLocationAlwaysAndWhenInUseUsageDescription": "This app needs your location to show nearby nature spots on the map."
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "This app needs your location to show nearby nature spots on the map.",
+        "NSMicrophoneUsageDescription": "This app needs microphone access for voice conversations with your nature therapy coach."
       }
+    },
+    "android": {
+      "permissions": [
+        "RECORD_AUDIO"
+      ]
     },
     "web": {
       "bundler": "metro",

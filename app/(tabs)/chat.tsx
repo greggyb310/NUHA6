@@ -16,17 +16,25 @@ import {
   getOrCreateSession,
   getSessionMessages,
   sendMessage,
+  sendVoiceMessage,
   clearSession,
   type StoredMessage,
   type ChatSession,
 } from '@/services/chat';
 import type { ChatMessage } from '@/types/ai';
+import { VoiceButton } from '@/components/voice-button';
+import { AudioMessage } from '@/components/audio-message';
+import type { VoiceRecording } from '@/services/voice';
 
 interface DisplayMessage {
   id: string;
   role: 'user' | 'assistant';
   content: string;
   isLoading?: boolean;
+  messageType?: 'text' | 'voice';
+  audioUrl?: string;
+  audioDurationMs?: number;
+  transcript?: string;
 }
 
 export default function ChatScreen() {
@@ -62,6 +70,10 @@ export default function ChatScreen() {
         id: msg.id,
         role: msg.role as 'user' | 'assistant',
         content: msg.content,
+        messageType: msg.message_type,
+        audioUrl: msg.audio_url,
+        audioDurationMs: msg.audio_duration_ms,
+        transcript: msg.transcript,
       }));
 
     setMessages(displayMessages);
@@ -132,6 +144,66 @@ export default function ChatScreen() {
     }, 100);
   };
 
+  const handleVoiceRecording = async (recording: VoiceRecording) => {
+    if (!session || isLoading) return;
+
+    setError(null);
+
+    const tempLoadingMessage: DisplayMessage = {
+      id: `temp-loading-${Date.now()}`,
+      role: 'assistant',
+      content: '',
+      isLoading: true,
+    };
+
+    setMessages((prev) => [...prev, tempLoadingMessage]);
+    setIsLoading(true);
+
+    setTimeout(() => {
+      flatListRef.current?.scrollToEnd({ animated: true });
+    }, 100);
+
+    const conversationHistory: ChatMessage[] = messages.map((msg) => ({
+      role: msg.role,
+      content: msg.content,
+    }));
+
+    const result = await sendVoiceMessage(session.id, recording, conversationHistory);
+
+    setIsLoading(false);
+
+    if (result.error) {
+      setError(result.error);
+      setMessages((prev) => prev.filter((msg) => !msg.isLoading));
+      return;
+    }
+
+    setMessages((prev) => {
+      const filtered = prev.filter((msg) => !msg.isLoading);
+      return [
+        ...filtered,
+        {
+          id: `user-voice-${Date.now()}`,
+          role: 'user',
+          content: result.transcript,
+          messageType: 'voice',
+          audioDurationMs: recording.duration,
+        },
+        {
+          id: `assistant-voice-${Date.now()}`,
+          role: 'assistant',
+          content: result.reply,
+          messageType: 'voice',
+          audioUrl: result.replyAudioBase64 ? `data:audio/mp3;base64,${result.replyAudioBase64}` : undefined,
+        },
+      ];
+    });
+
+    setTimeout(() => {
+      flatListRef.current?.scrollToEnd({ animated: true });
+    }, 100);
+  };
+
   const handleClearChat = async () => {
     if (!session) return;
 
@@ -156,6 +228,8 @@ export default function ChatScreen() {
       );
     }
 
+    const isVoiceMessage = item.messageType === 'voice' && item.audioUrl;
+
     return (
       <View
         style={[
@@ -163,9 +237,18 @@ export default function ChatScreen() {
           isUser ? styles.userBubble : styles.assistantBubble,
         ]}
       >
-        <Text style={[styles.messageText, isUser && styles.userMessageText]}>
-          {item.content}
-        </Text>
+        {isVoiceMessage ? (
+          <AudioMessage
+            audioBase64={item.audioUrl!.replace('data:audio/mp3;base64,', '')}
+            transcript={item.content}
+            duration={item.audioDurationMs}
+            isUser={isUser}
+          />
+        ) : (
+          <Text style={[styles.messageText, isUser && styles.userMessageText]}>
+            {item.content}
+          </Text>
+        )}
       </View>
     );
   };
@@ -256,6 +339,10 @@ export default function ChatScreen() {
         />
 
         <View style={styles.inputContainer}>
+          <VoiceButton
+            onRecordingComplete={handleVoiceRecording}
+            disabled={isLoading}
+          />
           <TextInput
             style={styles.input}
             value={inputText}
