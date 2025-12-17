@@ -21,6 +21,15 @@ export default function HomeScreen() {
 
   const fetchLocationData = async () => {
     if (Platform.OS === 'web') {
+      setWeather({
+        temperature: 72,
+        feelsLike: 70,
+        description: 'Perfect weather for outdoor activities',
+        humidity: 65,
+        windSpeed: 8,
+        icon: '01d',
+        location: 'Demo Location',
+      });
       return;
     }
 
