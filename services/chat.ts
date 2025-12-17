@@ -25,11 +25,14 @@ export interface StoredMessage {
 }
 
 export async function createSession(assistantType = 'health_coach'): Promise<ChatSession | null> {
+  const { data: { user } } = await supabase.auth.getUser();
+
   const { data, error } = await supabase
     .from('chat_sessions')
     .insert({
       assistant_type: assistantType,
       title: 'New Conversation',
+      user_id: user?.id || null,
     })
     .select()
     .single();
@@ -43,12 +46,22 @@ export async function createSession(assistantType = 'health_coach'): Promise<Cha
 }
 
 export async function getOrCreateSession(assistantType = 'health_coach'): Promise<ChatSession | null> {
-  const { data: existingSessions, error: fetchError } = await supabase
+  const { data: { user } } = await supabase.auth.getUser();
+
+  let query = supabase
     .from('chat_sessions')
     .select('*')
     .eq('assistant_type', assistantType)
     .order('updated_at', { ascending: false })
     .limit(1);
+
+  if (user) {
+    query = query.eq('user_id', user.id);
+  } else {
+    query = query.is('user_id', null);
+  }
+
+  const { data: existingSessions, error: fetchError } = await query;
 
   if (fetchError) {
     console.error('Error fetching sessions:', fetchError);
