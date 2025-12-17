@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, Platform } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, Platform, TouchableOpacity } from 'react-native';
 import MapView, { Marker, Circle, PROVIDER_DEFAULT } from 'react-native-maps';
 import * as Location from 'expo-location';
-import { MapPin } from 'lucide-react-native';
+import { MapPin, Layers } from 'lucide-react-native';
 
 interface NaturePlace {
   id: string;
@@ -19,12 +19,17 @@ interface DebugInfo {
   totalResults?: number;
 }
 
+type MapType = 'standard' | 'satellite' | 'hybrid';
+
 export default function HomeScreen() {
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
   const [places, setPlaces] = useState<NaturePlace[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [debugInfo, setDebugInfo] = useState<DebugInfo | null>(null);
+  const [mapType, setMapType] = useState<MapType>('standard');
+  const [showTraffic, setShowTraffic] = useState(false);
+  const [showLayerMenu, setShowLayerMenu] = useState(false);
 
   useEffect(() => {
     if (Platform.OS === 'web') {
@@ -133,6 +138,10 @@ export default function HomeScreen() {
       <MapView
         style={styles.map}
         provider={PROVIDER_DEFAULT}
+        mapType={mapType}
+        showsTraffic={showTraffic}
+        showsPointsOfInterest={true}
+        showsBuildings={true}
         initialRegion={{
           latitude: location.coords.latitude,
           longitude: location.coords.longitude,
@@ -190,6 +199,61 @@ export default function HomeScreen() {
           <Text style={styles.mockBadge}>Mock Data</Text>
         )}
       </View>
+
+      <TouchableOpacity
+        style={styles.layerButton}
+        onPress={() => setShowLayerMenu(!showLayerMenu)}
+      >
+        <Layers size={24} color="#FFFFFF" />
+      </TouchableOpacity>
+
+      {showLayerMenu && (
+        <View style={styles.layerMenu}>
+          <Text style={styles.layerMenuTitle}>Map Layers</Text>
+
+          <View style={styles.layerSection}>
+            <Text style={styles.layerSectionTitle}>Map Type</Text>
+            <View style={styles.mapTypeButtons}>
+              <TouchableOpacity
+                style={[styles.mapTypeButton, mapType === 'standard' && styles.mapTypeButtonActive]}
+                onPress={() => setMapType('standard')}
+              >
+                <Text style={[styles.mapTypeButtonText, mapType === 'standard' && styles.mapTypeButtonTextActive]}>
+                  Standard
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.mapTypeButton, mapType === 'satellite' && styles.mapTypeButtonActive]}
+                onPress={() => setMapType('satellite')}
+              >
+                <Text style={[styles.mapTypeButtonText, mapType === 'satellite' && styles.mapTypeButtonTextActive]}>
+                  Satellite
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.mapTypeButton, mapType === 'hybrid' && styles.mapTypeButtonActive]}
+                onPress={() => setMapType('hybrid')}
+              >
+                <Text style={[styles.mapTypeButtonText, mapType === 'hybrid' && styles.mapTypeButtonTextActive]}>
+                  Hybrid
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          <View style={styles.layerSection}>
+            <TouchableOpacity
+              style={styles.toggleRow}
+              onPress={() => setShowTraffic(!showTraffic)}
+            >
+              <Text style={styles.toggleLabel}>Show Traffic</Text>
+              <View style={[styles.toggle, showTraffic && styles.toggleActive]}>
+                <View style={[styles.toggleThumb, showTraffic && styles.toggleThumbActive]} />
+              </View>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
     </View>
   );
 }
@@ -276,5 +340,105 @@ const styles = StyleSheet.create({
     marginTop: 8,
     fontWeight: '600',
     textTransform: 'uppercase',
+  },
+  layerButton: {
+    position: 'absolute',
+    bottom: 100,
+    right: 20,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#4A7C2E',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  layerMenu: {
+    position: 'absolute',
+    bottom: 170,
+    right: 20,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 16,
+    minWidth: 200,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  layerMenuTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#2D3E1F',
+    marginBottom: 12,
+  },
+  layerSection: {
+    marginBottom: 12,
+  },
+  layerSectionTitle: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#5A6C4A',
+    marginBottom: 8,
+    textTransform: 'uppercase',
+  },
+  mapTypeButtons: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  mapTypeButton: {
+    flex: 1,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    backgroundColor: '#F5F8F3',
+    alignItems: 'center',
+  },
+  mapTypeButtonActive: {
+    backgroundColor: '#4A7C2E',
+  },
+  mapTypeButtonText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#5A6C4A',
+  },
+  mapTypeButtonTextActive: {
+    color: '#FFFFFF',
+  },
+  toggleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  toggleLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#2D3E1F',
+  },
+  toggle: {
+    width: 48,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#E5E7EB',
+    justifyContent: 'center',
+    paddingHorizontal: 2,
+  },
+  toggleActive: {
+    backgroundColor: '#4A7C2E',
+  },
+  toggleThumb: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#FFFFFF',
+    alignSelf: 'flex-start',
+  },
+  toggleThumbActive: {
+    alignSelf: 'flex-end',
   },
 });
