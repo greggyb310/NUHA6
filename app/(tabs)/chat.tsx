@@ -43,16 +43,22 @@ const THERAPEUTIC_OPTIONS = [
   'Mindfulness',
 ];
 
+const RISK_TOLERANCE_OPTIONS = [
+  { value: 'low', label: 'Low', description: 'Safe and easy paths' },
+  { value: 'medium', label: 'Medium', description: 'Some challenge' },
+  { value: 'high', label: 'High', description: 'Adventurous routes' },
+];
+
 const ENERGY_LEVELS = [
-  { value: 'low', label: 'Low', description: 'Gentle pace' },
-  { value: 'medium', label: 'Medium', description: 'Moderate activity' },
-  { value: 'high', label: 'High', description: 'Vigorous activity' },
+  { value: 'low', label: 'Low - Gentle pace' },
+  { value: 'medium', label: 'Medium - Moderate activity' },
+  { value: 'high', label: 'High - Vigorous activity' },
 ];
 
 const DURATION_OPTIONS = [
-  { value: 15, label: '15 min' },
-  { value: 30, label: '30 min' },
-  { value: 45, label: '45 min' },
+  { value: 15, label: '15 minutes' },
+  { value: 30, label: '30 minutes' },
+  { value: 45, label: '45 minutes' },
   { value: 60, label: '1 hour' },
   { value: 90, label: '1.5 hours' },
   { value: 120, label: '2 hours' },
@@ -61,8 +67,12 @@ const DURATION_OPTIONS = [
 export default function CreateScreen() {
   const [selectedActivities, setSelectedActivities] = useState<string[]>([]);
   const [selectedTherapeutic, setSelectedTherapeutic] = useState<string[]>([]);
+  const [riskTolerance, setRiskTolerance] = useState<string>('medium');
   const [energyLevel, setEnergyLevel] = useState<string>('medium');
   const [duration, setDuration] = useState<number>(30);
+  const [showRiskDropdown, setShowRiskDropdown] = useState(false);
+  const [showEnergyDropdown, setShowEnergyDropdown] = useState(false);
+  const [showDurationDropdown, setShowDurationDropdown] = useState(false);
   const [weather, setWeather] = useState<WeatherData | null>(null);
   const [weatherLoading, setWeatherLoading] = useState(true);
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
@@ -97,12 +107,15 @@ export default function CreateScreen() {
 
       const { data } = await supabase
         .from('user_profiles')
-        .select('activity_preferences')
+        .select('activity_preferences, risk_tolerance')
         .eq('user_id', user.id)
         .maybeSingle();
 
       if (data?.activity_preferences) {
         setSelectedActivities(data.activity_preferences);
+      }
+      if (data?.risk_tolerance) {
+        setRiskTolerance(data.risk_tolerance);
       }
     } catch (error) {
       console.error('Error loading preferences:', error);
@@ -164,6 +177,23 @@ export default function CreateScreen() {
     setSelectedTherapeutic(newOptions);
   };
 
+  const updateRiskTolerance = async (value: string) => {
+    setRiskTolerance(value);
+    setShowRiskDropdown(false);
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      await supabase
+        .from('user_profiles')
+        .update({ risk_tolerance: value })
+        .eq('user_id', user.id);
+    } catch (error) {
+      console.error('Error saving risk tolerance:', error);
+    }
+  };
+
   const handleSendMessage = async () => {
     if (!inputText.trim() || !sessionId || chatLoading) return;
 
@@ -218,6 +248,7 @@ export default function CreateScreen() {
       const preferences = {
         activities: selectedActivities,
         therapeutic: selectedTherapeutic,
+        riskTolerance,
         energyLevel,
         weather: weather ? {
           temp: weather.temperature,
@@ -309,6 +340,114 @@ export default function CreateScreen() {
         <MinimalWeather weather={weather} loading={weatherLoading} />
 
         <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Duration</Text>
+          <Text style={styles.sectionSubtitle}>How long do you want to be outside?</Text>
+          <TouchableOpacity
+            style={styles.dropdown}
+            onPress={() => setShowDurationDropdown(!showDurationDropdown)}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.dropdownText}>
+              {DURATION_OPTIONS.find(opt => opt.value === duration)?.label}
+            </Text>
+            <Text style={styles.dropdownArrow}>{showDurationDropdown ? '▲' : '▼'}</Text>
+          </TouchableOpacity>
+          {showDurationDropdown && (
+            <View style={styles.dropdownMenu}>
+              {DURATION_OPTIONS.map((option) => (
+                <TouchableOpacity
+                  key={option.value}
+                  style={styles.dropdownItem}
+                  onPress={() => {
+                    setDuration(option.value);
+                    setShowDurationDropdown(false);
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[
+                    styles.dropdownItemText,
+                    duration === option.value && styles.dropdownItemTextSelected
+                  ]}>
+                    {option.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Energy Level</Text>
+          <Text style={styles.sectionSubtitle}>How much energy do you have today?</Text>
+          <TouchableOpacity
+            style={styles.dropdown}
+            onPress={() => setShowEnergyDropdown(!showEnergyDropdown)}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.dropdownText}>
+              {ENERGY_LEVELS.find(lvl => lvl.value === energyLevel)?.label}
+            </Text>
+            <Text style={styles.dropdownArrow}>{showEnergyDropdown ? '▲' : '▼'}</Text>
+          </TouchableOpacity>
+          {showEnergyDropdown && (
+            <View style={styles.dropdownMenu}>
+              {ENERGY_LEVELS.map((level) => (
+                <TouchableOpacity
+                  key={level.value}
+                  style={styles.dropdownItem}
+                  onPress={() => {
+                    setEnergyLevel(level.value);
+                    setShowEnergyDropdown(false);
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[
+                    styles.dropdownItemText,
+                    energyLevel === level.value && styles.dropdownItemTextSelected
+                  ]}>
+                    {level.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Risk Tolerance</Text>
+          <Text style={styles.sectionSubtitle}>What level of challenge do you prefer?</Text>
+          <TouchableOpacity
+            style={styles.dropdown}
+            onPress={() => setShowRiskDropdown(!showRiskDropdown)}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.dropdownText}>
+              {RISK_TOLERANCE_OPTIONS.find(opt => opt.value === riskTolerance)?.label} - {RISK_TOLERANCE_OPTIONS.find(opt => opt.value === riskTolerance)?.description}
+            </Text>
+            <Text style={styles.dropdownArrow}>{showRiskDropdown ? '▲' : '▼'}</Text>
+          </TouchableOpacity>
+          {showRiskDropdown && (
+            <View style={styles.dropdownMenu}>
+              {RISK_TOLERANCE_OPTIONS.map((option) => (
+                <TouchableOpacity
+                  key={option.value}
+                  style={styles.dropdownItem}
+                  onPress={() => updateRiskTolerance(option.value)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[
+                    styles.dropdownItemText,
+                    riskTolerance === option.value && styles.dropdownItemTextSelected
+                  ]}>
+                    {option.label} - {option.description}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+        </View>
+
+        <View style={styles.section}>
           <Text style={styles.sectionTitle}>Activity Preferences</Text>
           <Text style={styles.sectionSubtitle}>Select all that interest you</Text>
           <View style={styles.chipContainer}>
@@ -356,68 +495,6 @@ export default function CreateScreen() {
                   ]}
                 >
                   {option}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Energy Level</Text>
-          <Text style={styles.sectionSubtitle}>How much energy do you have today?</Text>
-          <View style={styles.energyContainer}>
-            {ENERGY_LEVELS.map((level) => (
-              <TouchableOpacity
-                key={level.value}
-                style={[
-                  styles.energyButton,
-                  energyLevel === level.value && styles.energyButtonSelected,
-                ]}
-                onPress={() => setEnergyLevel(level.value)}
-                activeOpacity={0.7}
-              >
-                <Text
-                  style={[
-                    styles.energyLabel,
-                    energyLevel === level.value && styles.energyLabelSelected,
-                  ]}
-                >
-                  {level.label}
-                </Text>
-                <Text
-                  style={[
-                    styles.energyDescription,
-                    energyLevel === level.value && styles.energyDescriptionSelected,
-                  ]}
-                >
-                  {level.description}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Duration</Text>
-          <Text style={styles.sectionSubtitle}>How long do you want to be outside?</Text>
-          <View style={styles.durationContainer}>
-            {DURATION_OPTIONS.map((option) => (
-              <TouchableOpacity
-                key={option.value}
-                style={[
-                  styles.durationButton,
-                  duration === option.value && styles.durationButtonSelected,
-                ]}
-                onPress={() => setDuration(option.value)}
-                activeOpacity={0.7}
-              >
-                <Text
-                  style={[
-                    styles.durationText,
-                    duration === option.value && styles.durationTextSelected,
-                  ]}
-                >
-                  {option.label}
                 </Text>
               </TouchableOpacity>
             ))}
@@ -568,66 +645,51 @@ const styles = StyleSheet.create({
   chipTextSelected: {
     color: '#FFFFFF',
   },
-  energyContainer: {
+  dropdown: {
     flexDirection: 'row',
-    gap: 12,
-    paddingHorizontal: 20,
-  },
-  energyButton: {
-    flex: 1,
-    paddingVertical: 16,
-    paddingHorizontal: 12,
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginHorizontal: 20,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
     borderRadius: 12,
     backgroundColor: '#FFFFFF',
     borderWidth: 2,
     borderColor: '#E5E7EB',
-    alignItems: 'center',
   },
-  energyButtonSelected: {
-    backgroundColor: '#4A7C2E',
-    borderColor: '#4A7C2E',
-  },
-  energyLabel: {
-    fontSize: 16,
-    fontWeight: '700',
+  dropdownText: {
+    fontSize: 15,
+    fontWeight: '600',
     color: '#2D3E1F',
-    marginBottom: 4,
+    flex: 1,
   },
-  energyLabelSelected: {
-    color: '#FFFFFF',
-  },
-  energyDescription: {
+  dropdownArrow: {
     fontSize: 12,
     color: '#5A6C4A',
+    marginLeft: 8,
   },
-  energyDescriptionSelected: {
-    color: 'rgba(255, 255, 255, 0.9)',
-  },
-  durationContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    paddingHorizontal: 20,
-  },
-  durationButton: {
-    paddingHorizontal: 20,
-    paddingVertical: 12,
+  dropdownMenu: {
+    marginHorizontal: 20,
+    marginTop: 8,
     borderRadius: 12,
     backgroundColor: '#FFFFFF',
-    borderWidth: 2,
+    borderWidth: 1,
     borderColor: '#E5E7EB',
+    overflow: 'hidden',
   },
-  durationButtonSelected: {
-    backgroundColor: '#4A7C2E',
-    borderColor: '#4A7C2E',
+  dropdownItem: {
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F5F8F3',
   },
-  durationText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#5A6C4A',
+  dropdownItemText: {
+    fontSize: 15,
+    color: '#2D3E1F',
   },
-  durationTextSelected: {
-    color: '#FFFFFF',
+  dropdownItemTextSelected: {
+    color: '#4A7C2E',
+    fontWeight: '700',
   },
   createButton: {
     marginHorizontal: 20,
