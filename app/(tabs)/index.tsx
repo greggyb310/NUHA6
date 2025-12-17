@@ -117,38 +117,6 @@ export default function HomeScreen() {
             )}
           </>
         )}
-
-        <View style={styles.featuresSection}>
-          <TouchableOpacity
-            style={styles.featureCard}
-            onPress={() => router.push('/(tabs)/chat')}
-          >
-            <View style={styles.featureIcon}>
-              <MessageCircle size={28} color="#4A7C2E" />
-            </View>
-            <View style={styles.featureContent}>
-              <Text style={styles.featureTitle}>Create</Text>
-              <Text style={styles.featureDescription}>
-                Design a nature therapy excursion
-              </Text>
-            </View>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.featureCard}
-            onPress={() => router.push('/(tabs)/explore')}
-          >
-            <View style={styles.featureIcon}>
-              <MapPin size={28} color="#4A7C2E" />
-            </View>
-            <View style={styles.featureContent}>
-              <Text style={styles.featureTitle}>Explore</Text>
-              <Text style={styles.featureDescription}>
-                Discover outdoor spaces near you
-              </Text>
-            </View>
-          </TouchableOpacity>
-        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -165,7 +133,7 @@ const styles = StyleSheet.create({
   heroSection: {
     alignItems: 'center',
     paddingHorizontal: 24,
-    paddingTop: 40,
+    paddingTop: 80,
     paddingBottom: 16,
   },
   logoContainer: {
