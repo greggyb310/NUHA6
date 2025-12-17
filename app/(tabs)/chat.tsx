@@ -285,66 +285,6 @@ export default function CreateScreen() {
       </View>
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
-        <View style={styles.chatSection}>
-          <Text style={styles.chatTitle}>Chat with AI Assistant</Text>
-          <View style={styles.chatContainer}>
-            <ScrollView
-              ref={chatScrollViewRef}
-              style={styles.messagesContainer}
-              contentContainerStyle={styles.messagesContent}
-            >
-              {messages.length === 0 ? (
-                <Text style={styles.emptyText}>
-                  Ask me anything about your outdoor excursion!
-                </Text>
-              ) : (
-                messages.map((message) => (
-                  <View
-                    key={message.id}
-                    style={[
-                      styles.messageBubble,
-                      message.role === 'user' ? styles.userBubble : styles.assistantBubble,
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.messageText,
-                        message.role === 'user' ? styles.userText : styles.assistantText,
-                      ]}
-                    >
-                      {message.content}
-                    </Text>
-                  </View>
-                ))
-              )}
-            </ScrollView>
-            <View style={styles.inputContainer}>
-              <TextInput
-                style={styles.input}
-                value={inputText}
-                onChangeText={setInputText}
-                placeholder="Type a message..."
-                placeholderTextColor="#999"
-                multiline
-                maxLength={500}
-                editable={!chatLoading}
-                onSubmitEditing={handleSendMessage}
-              />
-              <TouchableOpacity
-                style={[styles.sendButton, (!inputText.trim() || chatLoading) && styles.sendButtonDisabled]}
-                onPress={handleSendMessage}
-                disabled={!inputText.trim() || chatLoading}
-              >
-                {chatLoading ? (
-                  <ActivityIndicator size="small" color="#FFFFFF" />
-                ) : (
-                  <Send size={20} color="#FFFFFF" />
-                )}
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-
         <MinimalWeather weather={weather} loading={weatherLoading} />
 
         <View style={styles.section}>
@@ -441,6 +381,62 @@ export default function CreateScreen() {
             <Text style={styles.errorText}>{error}</Text>
           </View>
         )}
+
+        <View style={styles.chatSection}>
+          <Text style={styles.chatTitle}>Anything else I should know?</Text>
+          <View style={styles.chatContainer}>
+            {messages.length > 0 && (
+              <ScrollView
+                ref={chatScrollViewRef}
+                style={styles.messagesContainer}
+                contentContainerStyle={styles.messagesContent}
+              >
+                {messages.map((message) => (
+                  <View
+                    key={message.id}
+                    style={[
+                      styles.messageBubble,
+                      message.role === 'user' ? styles.userBubble : styles.assistantBubble,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.messageText,
+                        message.role === 'user' ? styles.userText : styles.assistantText,
+                      ]}
+                    >
+                      {message.content}
+                    </Text>
+                  </View>
+                ))}
+              </ScrollView>
+            )}
+            <View style={[styles.inputContainer, messages.length > 0 && styles.inputContainerWithBorder]}>
+              <TextInput
+                style={styles.input}
+                value={inputText}
+                onChangeText={setInputText}
+                placeholder="Type a message..."
+                placeholderTextColor="#999"
+                multiline
+                maxLength={500}
+                editable={!chatLoading}
+                onSubmitEditing={handleSendMessage}
+              />
+              <TouchableOpacity
+                style={[styles.sendButton, (!inputText.trim() || chatLoading) && styles.sendButtonDisabled]}
+                onPress={handleSendMessage}
+                disabled={!inputText.trim() || chatLoading}
+              >
+                {chatLoading ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Send size={20} color="#FFFFFF" />
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
 
         <TouchableOpacity
           style={[styles.createButton, loading && styles.createButtonDisabled]}
@@ -622,7 +618,8 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   chatSection: {
-    marginTop: 16,
+    marginTop: 24,
+    marginBottom: 16,
     marginHorizontal: 20,
   },
   chatTitle: {
@@ -685,9 +682,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-end',
     padding: 12,
+    gap: 8,
+  },
+  inputContainerWithBorder: {
     borderTopWidth: 1,
     borderTopColor: '#E5E7EB',
-    gap: 8,
   },
   input: {
     flex: 1,
