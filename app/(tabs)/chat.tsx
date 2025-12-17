@@ -50,6 +50,7 @@ export default function CreateScreen() {
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
 
   useEffect(() => {
     loadUserPreferences();
@@ -130,6 +131,7 @@ export default function CreateScreen() {
 
     setLoading(true);
     setError(null);
+    setSuccess(null);
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -186,8 +188,11 @@ export default function CreateScreen() {
       if (dbError) {
         console.error('Error saving excursion:', dbError);
         setError('Created excursion but failed to save. Please try again.');
+        setLoading(false);
+        return;
       }
 
+      setSuccess(`"${excursionData.title}" created successfully! Check the Explore tab to view your excursion.`);
       setLoading(false);
     } catch (err) {
       console.error('Error creating excursion:', err);
@@ -303,6 +308,12 @@ export default function CreateScreen() {
             <MapScreen />
           </View>
         </View>
+
+        {success && (
+          <View style={styles.successContainer}>
+            <Text style={styles.successText}>{success}</Text>
+          </View>
+        )}
 
         {error && (
           <View style={styles.errorContainer}>
@@ -486,6 +497,21 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: '#FFFFFF',
+  },
+  successContainer: {
+    marginHorizontal: 20,
+    marginTop: 16,
+    padding: 12,
+    borderRadius: 8,
+    backgroundColor: '#E8F5E9',
+    borderWidth: 1,
+    borderColor: '#A5D6A7',
+  },
+  successText: {
+    fontSize: 14,
+    color: '#2E7D32',
+    textAlign: 'center',
+    fontWeight: '600',
   },
   errorContainer: {
     marginHorizontal: 20,
