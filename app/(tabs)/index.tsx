@@ -27,7 +27,7 @@ export default function HomeScreen() {
             />
           </View>
           <Text style={styles.welcomeText}>Welcome</Text>
-          <Text style={styles.heroTitle}>NatureUP Health</Text>
+          <Text style={styles.heroTitle}>NatureUp Health</Text>
           <Text style={styles.heroSubtitle}>
             Your voice-first companion for personalized nature therapy and outdoor wellness
           </Text>
@@ -103,13 +103,13 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   welcomeText: {
-    fontSize: 18,
+    fontSize: 32,
     fontWeight: '600',
     color: '#4A7C2E',
     marginBottom: 8,
   },
   heroTitle: {
-    fontSize: 32,
+    fontSize: 20,
     fontWeight: '700',
     color: '#2D3E1F',
     marginBottom: 12,
