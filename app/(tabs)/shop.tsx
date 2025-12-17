@@ -16,14 +16,14 @@ interface Product {
   sort_order: number;
 }
 
-const CATEGORIES = ['All', 'Plants', 'Art', 'Experiences', 'Books'];
+const CATEGORIES = ['Art', 'Books', 'Experiences', 'Plants'];
 
 export default function ShopScreen() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [selectedCategory, setSelectedCategory] = useState('All');
+  const [selectedCategory, setSelectedCategory] = useState('Art');
 
   const fetchProducts = async () => {
     try {
@@ -55,9 +55,7 @@ export default function ShopScreen() {
     fetchProducts();
   };
 
-  const filteredProducts = selectedCategory === 'All'
-    ? products
-    : products.filter(p => p.category === selectedCategory);
+  const filteredProducts = products.filter(p => p.category === selectedCategory);
 
   if (loading) {
     return (
