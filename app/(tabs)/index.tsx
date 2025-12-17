@@ -84,8 +84,9 @@ export default function HomeScreen() {
             />
           </View>
           <Text style={styles.heroTitle}>NatureUp Health</Text>
-          <Text style={styles.welcomeText}>Reconnecting with Awe</Text>
         </View>
+
+        <Text style={styles.welcomeText}>Reconnect with Awe</Text>
 
         {loading ? (
           <View style={styles.loadingContainer}>
@@ -165,7 +166,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 24,
     paddingTop: 40,
-    paddingBottom: 32,
+    paddingBottom: 16,
   },
   logoContainer: {
     width: 120,
@@ -185,14 +186,15 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '700',
     color: '#2D3E1F',
-    marginBottom: 4,
     textAlign: 'center',
   },
   welcomeText: {
     fontSize: 28,
     fontWeight: '600',
     color: '#4A7C2E',
-    marginBottom: 16,
+    textAlign: 'center',
+    marginHorizontal: 24,
+    marginBottom: 20,
   },
   loadingContainer: {
     marginHorizontal: 20,
