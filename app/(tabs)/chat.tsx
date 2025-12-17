@@ -233,6 +233,8 @@ export default function CreateScreen() {
       </View>
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+        <MinimalWeather weather={weather} loading={weatherLoading} />
+
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Activity Preferences</Text>
           <Text style={styles.sectionSubtitle}>Select all that interest you</Text>

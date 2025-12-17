@@ -5,8 +5,7 @@ import { useLocalSearchParams, router } from 'expo-router';
 import { supabase } from '@/services/supabase';
 import { ArrowLeft, MapPin, Clock, Navigation as NavigationIcon } from 'lucide-react-native';
 import { LoadingScreen } from '@/components/loading-screen';
-import MinimalWeather from '@/components/minimal-weather';
-import { getCurrentWeather, WeatherData } from '@/services/weather';
+import MapScreen from '@/components/map-screen';
 
 interface Excursion {
   id: string;
@@ -34,8 +33,6 @@ export default function ExcursionDetailScreen() {
   const [error, setError] = useState<string | null>(null);
   const [stepsExpanded, setStepsExpanded] = useState(false);
   const [contentReady, setContentReady] = useState(false);
-  const [weather, setWeather] = useState<WeatherData | null>(null);
-  const [weatherLoading, setWeatherLoading] = useState(true);
 
   useEffect(() => {
     loadExcursion();
@@ -49,24 +46,6 @@ export default function ExcursionDetailScreen() {
       return () => clearTimeout(timer);
     }
   }, [loading, excursion]);
-
-  useEffect(() => {
-    const fetchWeather = async () => {
-      if (excursion) {
-        const location = excursion.route_data?.start_location || excursion.route_data?.waypoints?.[0];
-        if (location) {
-          setWeatherLoading(true);
-          const weatherData = await getCurrentWeather(location.lat, location.lng);
-          setWeather(weatherData);
-          setWeatherLoading(false);
-        } else {
-          setWeatherLoading(false);
-        }
-      }
-    };
-
-    fetchWeather();
-  }, [excursion]);
 
   const loadExcursion = async () => {
     try {
@@ -173,8 +152,6 @@ export default function ExcursionDetailScreen() {
       </View>
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
-        <MinimalWeather weather={weather} loading={weatherLoading} />
-
         <View style={styles.metricsCard}>
           {excursion.duration_minutes && (
             <View style={styles.metricItem}>
@@ -239,6 +216,19 @@ export default function ExcursionDetailScreen() {
                 </Text>
               </TouchableOpacity>
             )}
+          </View>
+        )}
+
+        {excursionLocation && (
+          <View style={styles.mapCard}>
+            <MapScreen
+              initialRegion={{
+                latitude: excursionLocation.lat,
+                longitude: excursionLocation.lng,
+                latitudeDelta: 0.01,
+                longitudeDelta: 0.01,
+              }}
+            />
           </View>
         )}
 
@@ -452,6 +442,19 @@ const styles = StyleSheet.create({
     color: '#5A6C4A',
     lineHeight: 18,
     paddingTop: 5,
+  },
+  mapCard: {
+    height: 300,
+    marginHorizontal: 20,
+    marginTop: 16,
+    borderRadius: 12,
+    overflow: 'hidden',
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   directionsButton: {
     backgroundColor: '#4A7C2E',
