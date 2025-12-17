@@ -184,6 +184,8 @@ export default function CreateScreen() {
   };
 
   const handleCreateExcursion = async () => {
+    Keyboard.dismiss();
+
     if (!location) {
       setError('Location not available. Please enable location permissions.');
       return;
