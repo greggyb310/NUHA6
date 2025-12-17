@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, Linking
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
 import { supabase } from '@/services/supabase';
-import { ArrowLeft, MapPin, Clock, Navigation as NavigationIcon, ChevronDown, ChevronUp } from 'lucide-react-native';
+import { ArrowLeft, MapPin, Clock, Navigation as NavigationIcon } from 'lucide-react-native';
 import MapScreen from '@/components/map-screen';
 import { LoadingScreen } from '@/components/loading-screen';
 
@@ -31,7 +31,6 @@ export default function ExcursionDetailScreen() {
   const [excursion, setExcursion] = useState<Excursion | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [descriptionExpanded, setDescriptionExpanded] = useState(false);
   const [stepsExpanded, setStepsExpanded] = useState(false);
   const [contentReady, setContentReady] = useState(false);
 
@@ -100,9 +99,9 @@ export default function ExcursionDetailScreen() {
   const excursionLocation = excursion.route_data?.start_location ||
     excursion.route_data?.waypoints?.[0];
 
-  const getDescriptionBulletPoints = (text: string): string[] => {
+  const getFirstSentence = (text: string): string => {
     const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0);
-    return sentences.slice(0, 3).map(s => s.trim());
+    return sentences[0] ? sentences[0].trim() + '.' : text;
   };
 
   const steps = excursion.route_data?.steps || [];
@@ -178,34 +177,12 @@ export default function ExcursionDetailScreen() {
         </View>
 
         {excursion.description && (
-          <TouchableOpacity
-            style={styles.descriptionCard}
-            onPress={() => setDescriptionExpanded(!descriptionExpanded)}
-            activeOpacity={0.9}
-          >
-            <View style={styles.cardHeader}>
-              <Text style={styles.cardTitle}>About</Text>
-              {descriptionExpanded ? (
-                <ChevronUp size={20} color="#5A6C4A" />
-              ) : (
-                <ChevronDown size={20} color="#5A6C4A" />
-              )}
-            </View>
-            {descriptionExpanded ? (
-              <Text style={styles.description}>
-                {excursion.description}
-              </Text>
-            ) : (
-              <View>
-                {getDescriptionBulletPoints(excursion.description).map((bullet, index) => (
-                  <View key={index} style={styles.bulletItem}>
-                    <View style={styles.bulletDot} />
-                    <Text style={styles.bulletText}>{bullet}</Text>
-                  </View>
-                ))}
-              </View>
-            )}
-          </TouchableOpacity>
+          <View style={styles.descriptionCard}>
+            <Text style={styles.excursionTitle}>{excursion.title}</Text>
+            <Text style={styles.excursionDescription}>
+              {getFirstSentence(excursion.description)}
+            </Text>
+          </View>
         )}
 
         {steps.length > 0 && (
@@ -368,13 +345,24 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     marginHorizontal: 20,
     marginTop: 16,
-    padding: 16,
+    padding: 20,
     borderRadius: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 2,
+  },
+  excursionTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#2D3E1F',
+    marginBottom: 8,
+  },
+  excursionDescription: {
+    fontSize: 15,
+    color: '#5A6C4A',
+    lineHeight: 22,
   },
   description: {
     fontSize: 14,
