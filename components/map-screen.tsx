@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity } from 'react-native';
-import MapView, { Marker, Circle, PROVIDER_DEFAULT, Region } from 'react-native-maps';
+import MapView, { Marker, Circle, Polyline, PROVIDER_DEFAULT, Region } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { Layers } from 'lucide-react-native';
 
@@ -29,12 +29,14 @@ interface MapScreenProps {
     longitude: number;
     title?: string;
   };
+  routeWaypoints?: Array<{ lat: number; lng: number }>;
 }
 
 export default function MapScreen({
   initialRegion,
   showNearbyPlaces = true,
-  destination
+  destination,
+  routeWaypoints
 }: MapScreenProps) {
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
   const [places, setPlaces] = useState<NaturePlace[]>([]);
@@ -208,6 +210,18 @@ export default function MapScreen({
             }}
             title={destination.title || 'Destination'}
             pinColor="#DC2626"
+          />
+        )}
+
+        {routeWaypoints && routeWaypoints.length > 0 && (
+          <Polyline
+            coordinates={routeWaypoints.map(wp => ({
+              latitude: wp.lat,
+              longitude: wp.lng,
+            }))}
+            strokeColor="#4A7C2E"
+            strokeWidth={4}
+            lineDashPattern={[1]}
           />
         )}
       </MapView>

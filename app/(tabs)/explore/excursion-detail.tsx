@@ -158,8 +158,8 @@ export default function ExcursionDetailScreen() {
               initialRegion={{
                 latitude: excursionLocation.lat,
                 longitude: excursionLocation.lng,
-                latitudeDelta: 0.01,
-                longitudeDelta: 0.01,
+                latitudeDelta: 0.02,
+                longitudeDelta: 0.02,
               }}
               showNearbyPlaces={false}
               destination={{
@@ -167,6 +167,7 @@ export default function ExcursionDetailScreen() {
                 longitude: excursionLocation.lng,
                 title: excursion.title,
               }}
+              routeWaypoints={excursion.route_data?.waypoints}
             />
           </View>
         )}
