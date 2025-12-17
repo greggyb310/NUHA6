@@ -255,6 +255,7 @@ Your role:
 - Design safe, enjoyable outdoor routes
 - Consider user location, nearby places, preferences, and duration
 - Focus on wellness benefits (stress reduction, mindfulness, physical activity)
+- SELECT ONE PRIMARY DESTINATION from the provided nearby places list
 - Provide clear, actionable steps${userPrefsSection}
 
 You will receive nearby places from OpenStreetMap, including:
@@ -264,7 +265,11 @@ You will receive nearby places from OpenStreetMap, including:
 - Lakes, rivers, and waterfronts
 - Trails and walking paths
 
-Use this information to create rich, varied excursions that combine multiple locations when appropriate.
+CRITICAL: You MUST select one place from the nearby places list as the primary destination.
+- Choose based on user preferences, route shape, therapeutic goals, and distance
+- Prioritize places with good ratings and appropriate difficulty
+- Consider the risk tolerance: low = safe/easy access, medium = moderate challenge, high = adventurous
+- The destination should be within reasonable distance for the requested duration
 
 Output format (JSON):
 {
@@ -273,7 +278,12 @@ Output format (JSON):
   "steps": ["Step 1: ...", "Step 2: ..."],
   "duration_minutes": 60,
   "distance_km": 3.5,
-  "difficulty": "easy"
+  "difficulty": "easy",
+  "destination": {
+    "name": "Exact name from nearby places list",
+    "lat": 37.1234,
+    "lng": -122.5678
+  }
 }`;
 
     default:

@@ -14,6 +14,7 @@ interface Excursion {
   route_data: {
     steps?: string[];
     start_location?: { lat: number; lng: number };
+    destination?: { name: string; lat: number; lng: number };
     waypoints?: Array<{ lat: number; lng: number; name?: string }>;
   };
   duration_minutes: number | null;
@@ -101,13 +102,14 @@ export default function ExcursionDetailScreen() {
     : null;
 
   const startLocation = excursion.route_data?.start_location;
+  const destination = excursion.route_data?.destination;
   const waypoints = excursion.route_data?.waypoints || [];
 
   const excursionLocation = startLocation || waypoints[0];
 
-  const destinationPoint = waypoints.length > 0
-    ? waypoints[Math.floor(waypoints.length / 2)]
-    : excursionLocation;
+  const destinationPoint = destination
+    ? { lat: destination.lat, lng: destination.lng }
+    : (waypoints.length > 0 ? waypoints[waypoints.length - 1] : excursionLocation);
 
   const getFirstSentence = (text: string): string => {
     const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0);
@@ -125,12 +127,13 @@ export default function ExcursionDetailScreen() {
     }
 
     const { lat, lng } = targetLocation;
-    const label = encodeURIComponent(excursion.title);
+    const destinationName = destination?.name || excursion.title;
+    const label = encodeURIComponent(destinationName);
 
     const url = Platform.select({
-      ios: `http://maps.apple.com/?daddr=${lat},${lng}&dirflg=w`,
-      android: `google.navigation:q=${lat},${lng}`,
-      default: `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`
+      ios: `http://maps.apple.com/?daddr=${label}&saddr=Current%20Location&dirflg=w`,
+      android: `google.navigation:q=${lat},${lng}&label=${label}`,
+      default: `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&destination_place_id=${label}`
     });
 
     try {
@@ -172,7 +175,7 @@ export default function ExcursionDetailScreen() {
               destination={destinationPoint ? {
                 latitude: destinationPoint.lat,
                 longitude: destinationPoint.lng,
-                title: excursion.title,
+                title: destination?.name || excursion.title,
               } : undefined}
               routeWaypoints={waypoints}
             />

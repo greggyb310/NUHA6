@@ -223,6 +223,12 @@ export default function CreateScreen() {
 
       console.log('Found nearby places:', nearbyPlaces.length);
 
+      if (nearbyPlaces.length === 0) {
+        setError('No nearby nature spots found. Do you know anywhere we can do this? Try moving to a different location or adjusting your preferences.');
+        setLoading(false);
+        return;
+      }
+
       const preferences = {
         activities: selectedActivities,
         therapeutic: selectedTherapeutic,
@@ -259,31 +265,35 @@ export default function CreateScreen() {
       const excursionData = result.result;
       console.log('Excursion data:', excursionData);
 
+      if (!excursionData.destination) {
+        setError('Could not determine a destination. Please try again with different preferences.');
+        setLoading(false);
+        return;
+      }
+
       const startLat = location.coords.latitude;
       const startLng = location.coords.longitude;
-      const distanceKm = excursionData.distance_km || (duration / 30) * 2.2;
+      const destLat = excursionData.destination.lat;
+      const destLng = excursionData.destination.lng;
 
-      const generateNatureRoute = (centerLat: number, centerLng: number, radiusKm: number, points: number = 12) => {
+      const generateRouteToDestination = (
+        startLat: number,
+        startLng: number,
+        endLat: number,
+        endLng: number,
+        points: number = 8
+      ) => {
         const waypoints = [];
-        const radiusInDegrees = radiusKm / 111;
-
         for (let i = 0; i <= points; i++) {
-          const angle = (i / points) * 2 * Math.PI;
-          const randomVariation = 0.3 + (Math.random() * 0.4);
-          const effectiveRadius = radiusInDegrees * randomVariation;
-
-          const angleVariation = (Math.random() - 0.5) * 0.3;
-          const adjustedAngle = angle + angleVariation;
-
-          const lat = centerLat + (effectiveRadius * Math.cos(adjustedAngle));
-          const lng = centerLng + (effectiveRadius * Math.sin(adjustedAngle) / Math.cos(centerLat * Math.PI / 180));
+          const progress = i / points;
+          const lat = startLat + (endLat - startLat) * progress;
+          const lng = startLng + (endLng - startLng) * progress;
           waypoints.push({ lat, lng });
         }
-
         return waypoints;
       };
 
-      const routeWaypoints = generateNatureRoute(startLat, startLng, distanceKm / (2 * Math.PI), 12);
+      const routeWaypoints = generateRouteToDestination(startLat, startLng, destLat, destLng, 8);
 
       console.log('Saving to database...');
       const { data: insertedData, error: dbError } = await supabase
@@ -297,6 +307,11 @@ export default function CreateScreen() {
             start_location: {
               lat: startLat,
               lng: startLng,
+            },
+            destination: {
+              name: excursionData.destination.name,
+              lat: destLat,
+              lng: destLng,
             },
             waypoints: routeWaypoints,
           },
