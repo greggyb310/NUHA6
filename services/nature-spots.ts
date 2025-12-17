@@ -51,8 +51,7 @@ function calculateDistance(
 export async function searchNatureSpotsNearby(
   latitude: number,
   longitude: number,
-  radiusMiles: number = 5,
-  includeTrails: boolean = true
+  radiusMiles: number = 5
 ): Promise<PlaceSearchResult> {
   const radiusMeters = radiusMiles * 1609.34;
 
@@ -84,7 +83,7 @@ export async function searchNatureSpotsNearby(
         })
         .filter((spot) => spot.distance <= radiusMeters)
         .sort((a, b) => a.distance - b.distance)
-        .slice(0, 3);
+        .slice(0, 10);
 
       if (nearbySpots.length >= 3) {
         return {
@@ -97,88 +96,49 @@ export async function searchNatureSpotsNearby(
     const supabaseUrl = Constants.expoConfig?.extra?.EXPO_PUBLIC_SUPABASE_URL || process.env.EXPO_PUBLIC_SUPABASE_URL;
     const supabaseAnonKey = Constants.expoConfig?.extra?.EXPO_PUBLIC_SUPABASE_ANON_KEY || process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
 
-    const [osmResponse, alltrailsResponse] = await Promise.allSettled([
-      fetch(
-        `${supabaseUrl}/functions/v1/nearby-places`,
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${supabaseAnonKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ latitude, longitude }),
-        }
-      ),
-      includeTrails ? fetch(
-        `${supabaseUrl}/functions/v1/alltrails-search`,
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${supabaseAnonKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ latitude, longitude, radiusMiles }),
-        }
-      ) : Promise.resolve(null),
-    ]);
-
-    let osmPlaces: NatureSpot[] = [];
-    let alltrailsPlaces: NatureSpot[] = [];
-
-    if (osmResponse.status === 'fulfilled' && osmResponse.value.ok) {
-      const data = await osmResponse.value.json();
-      osmPlaces = (data.places || []).map((place: any) => ({
-        ...place,
-        source: 'osm' as const,
-      }));
-
-      for (const place of osmPlaces) {
-        await supabase
-          .from('nature_spots')
-          .upsert(
-            {
-              osm_id: place.id,
-              name: place.name,
-              latitude: place.latitude,
-              longitude: place.longitude,
-              type: place.type,
-              tags: {},
-              updated_at: new Date().toISOString(),
-            },
-            {
-              onConflict: 'osm_id',
-            }
-          );
+    const response = await fetch(
+      `${supabaseUrl}/functions/v1/nearby-places`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${supabaseAnonKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ latitude, longitude }),
       }
+    );
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch places from API');
     }
 
-    if (alltrailsResponse.status === 'fulfilled' && alltrailsResponse.value && alltrailsResponse.value.ok) {
-      const data = await alltrailsResponse.value.json();
-      alltrailsPlaces = (data.trails || []).map((trail: any) => {
-        const distance = calculateDistance(
-          latitude,
-          longitude,
-          trail.latitude,
-          trail.longitude
+    const data = await response.json();
+    const places: NatureSpot[] = (data.places || []).map((place: any) => ({
+      ...place,
+      source: 'osm' as const,
+    }));
+
+    for (const place of places) {
+      await supabase
+        .from('nature_spots')
+        .upsert(
+          {
+            osm_id: place.id,
+            name: place.name,
+            latitude: place.latitude,
+            longitude: place.longitude,
+            type: place.type,
+            tags: {},
+            updated_at: new Date().toISOString(),
+          },
+          {
+            onConflict: 'osm_id',
+          }
         );
-        return {
-          ...trail,
-          distance,
-          source: 'alltrails' as const,
-        };
-      });
     }
-
-    const combinedPlaces = [...osmPlaces, ...alltrailsPlaces]
-      .sort((a, b) => {
-        if (a.distance === undefined) return 1;
-        if (b.distance === undefined) return -1;
-        return a.distance - b.distance;
-      })
-      .slice(0, 10);
 
     return {
-      places: combinedPlaces,
+      places,
       cached: false,
     };
   } catch (error) {

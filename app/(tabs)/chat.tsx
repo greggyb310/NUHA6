@@ -196,12 +196,11 @@ export default function CreateScreen() {
         return;
       }
 
-      console.log('User authenticated, fetching nearby places and trails...');
+      console.log('User authenticated, fetching nearby places...');
       const nearbyResult = await searchNatureSpotsNearby(
         location.coords.latitude,
         location.coords.longitude,
-        10,
-        true
+        10
       );
 
       const nearbyPlaces = nearbyResult.places.map(place => ({
