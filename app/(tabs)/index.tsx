@@ -6,42 +6,52 @@ import { useRouter } from 'expo-router';
 import * as Location from 'expo-location';
 import WeatherCard from '@/components/weather-card';
 import { getCurrentWeather, WeatherData } from '@/services/weather';
+import { searchNatureSpotsNearby, NatureSpot } from '@/services/nature-spots';
 
 export default function HomeScreen() {
   const router = useRouter();
   const [weather, setWeather] = useState<WeatherData | null>(null);
   const [weatherLoading, setWeatherLoading] = useState(false);
+  const [natureSpots, setNatureSpots] = useState<NatureSpot[]>([]);
+  const [spotsLoading, setSpotsLoading] = useState(false);
 
   useEffect(() => {
-    fetchWeather();
+    fetchLocationData();
   }, []);
 
-  const fetchWeather = async () => {
+  const fetchLocationData = async () => {
     if (Platform.OS === 'web') {
       return;
     }
 
     try {
       setWeatherLoading(true);
+      setSpotsLoading(true);
+
       const { status } = await Location.requestForegroundPermissionsAsync();
 
       if (status !== 'granted') {
         console.log('Location permission denied');
         setWeatherLoading(false);
+        setSpotsLoading(false);
         return;
       }
 
       const location = await Location.getCurrentPositionAsync({});
-      const weatherData = await getCurrentWeather(
-        location.coords.latitude,
-        location.coords.longitude
-      );
+      const { latitude, longitude } = location.coords;
+
+      const [weatherData, spotsResult] = await Promise.all([
+        getCurrentWeather(latitude, longitude),
+        searchNatureSpotsNearby(latitude, longitude, 5)
+      ]);
 
       setWeather(weatherData);
+      setNatureSpots(spotsResult.places.slice(0, 3));
     } catch (error) {
-      console.error('Error fetching weather:', error);
+      console.error('Error fetching location data:', error);
     } finally {
       setWeatherLoading(false);
+      setSpotsLoading(false);
     }
   };
 
