@@ -14,12 +14,18 @@ export default function TabLayout() {
         },
       }}>
       <Tabs.Screen
-        name="index"
+        name="home"
         options={{
-          title: 'Map',
+          title: 'Home',
           tabBarIcon: ({ size, color }) => (
             <MapPin size={size} color={color} />
           ),
+        }}
+      />
+      <Tabs.Screen
+        name="index"
+        options={{
+          href: null,
         }}
       />
       <Tabs.Screen
