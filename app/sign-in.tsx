@@ -1,8 +1,16 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { Fingerprint } from 'lucide-react-native';
 import { signIn } from '@/services/auth';
+import {
+  getBiometricCapabilities,
+  isBiometricEnabled,
+  getStoredCredentials,
+  authenticateWithBiometrics,
+  BiometricCapabilities,
+} from '@/services/biometric-auth';
 
 export default function SignInScreen() {
   const router = useRouter();
@@ -10,6 +18,57 @@ export default function SignInScreen() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [biometricCapabilities, setBiometricCapabilities] = useState<BiometricCapabilities | null>(null);
+  const [biometricEnabled, setBiometricEnabled] = useState(false);
+
+  useEffect(() => {
+    checkBiometricAvailability();
+  }, []);
+
+  const checkBiometricAvailability = async () => {
+    const capabilities = await getBiometricCapabilities();
+    setBiometricCapabilities(capabilities);
+
+    if (capabilities.isAvailable) {
+      const enabled = await isBiometricEnabled();
+      setBiometricEnabled(enabled);
+    }
+  };
+
+  const handleBiometricSignIn = async () => {
+    setError(null);
+    setLoading(true);
+
+    const authResult = await authenticateWithBiometrics();
+
+    if (!authResult.success) {
+      setError(authResult.error || 'Biometric authentication failed');
+      setLoading(false);
+      return;
+    }
+
+    const credentials = await getStoredCredentials();
+
+    if (!credentials) {
+      setError('No stored credentials found');
+      setLoading(false);
+      return;
+    }
+
+    const { user, error: signInError } = await signIn(credentials);
+
+    if (signInError) {
+      setError(signInError);
+      setLoading(false);
+      return;
+    }
+
+    if (user) {
+      router.replace('/(tabs)');
+    }
+
+    setLoading(false);
+  };
 
   const handleSignIn = async () => {
     setError(null);
@@ -47,6 +106,27 @@ export default function SignInScreen() {
             <Text style={styles.title}>Welcome Back</Text>
             <Text style={styles.subtitle}>Sign in to continue your wellness journey</Text>
           </View>
+
+          {biometricEnabled && biometricCapabilities?.isAvailable && (
+            <View style={styles.biometricSection}>
+              <TouchableOpacity
+                style={styles.biometricButton}
+                onPress={handleBiometricSignIn}
+                disabled={loading}
+              >
+                <Fingerprint size={32} color="#4A7C2E" />
+                <Text style={styles.biometricText}>
+                  Sign in with {biometricCapabilities.biometricType}
+                </Text>
+              </TouchableOpacity>
+
+              <View style={styles.divider}>
+                <View style={styles.dividerLine} />
+                <Text style={styles.dividerText}>or</Text>
+                <View style={styles.dividerLine} />
+              </View>
+            </View>
+          )}
 
           <View style={styles.form}>
             <View style={styles.inputGroup}>
@@ -194,5 +274,39 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#4A7C2E',
     fontWeight: '600',
+  },
+  biometricSection: {
+    paddingHorizontal: 24,
+    marginBottom: 16,
+  },
+  biometricButton: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 20,
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#4A7C2E',
+    gap: 8,
+  },
+  biometricText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#4A7C2E',
+  },
+  divider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 24,
+    marginBottom: 8,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#E5E7EB',
+  },
+  dividerText: {
+    fontSize: 14,
+    color: '#5A6C4A',
+    marginHorizontal: 16,
   },
 });

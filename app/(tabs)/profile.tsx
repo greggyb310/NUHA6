@@ -1,10 +1,17 @@
 import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, ActivityIndicator, Switch, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { User, LogOut } from 'lucide-react-native';
+import { User, LogOut, Fingerprint } from 'lucide-react-native';
 import { getCurrentUser, signOut } from '@/services/auth';
 import { getUserProfile, updateUserProfile } from '@/services/user-profile';
+import {
+  getBiometricCapabilities,
+  isBiometricEnabled,
+  enableBiometric,
+  disableBiometric,
+  BiometricCapabilities,
+} from '@/services/biometric-auth';
 
 const HEALTH_GOALS = [
   'Reduce stress',
@@ -25,9 +32,13 @@ export default function ProfileScreen() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [biometricCapabilities, setBiometricCapabilities] = useState<BiometricCapabilities | null>(null);
+  const [biometricEnabled, setBiometricEnabled] = useState(false);
 
   useEffect(() => {
     loadProfile();
+    checkBiometricAvailability();
   }, []);
 
   const loadProfile = async () => {
@@ -52,6 +63,39 @@ export default function ProfileScreen() {
       setError('Failed to load profile');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const checkBiometricAvailability = async () => {
+    const capabilities = await getBiometricCapabilities();
+    setBiometricCapabilities(capabilities);
+
+    if (capabilities.isAvailable) {
+      const enabled = await isBiometricEnabled();
+      setBiometricEnabled(enabled);
+    }
+  };
+
+  const handleBiometricToggle = async (value: boolean) => {
+    if (value) {
+      if (!password) {
+        setError('Please enter your password to enable biometric authentication');
+        return;
+      }
+
+      const result = await enableBiometric(email, password);
+
+      if (result.success) {
+        setBiometricEnabled(true);
+        setPassword('');
+        setError(null);
+      } else {
+        setError(result.error || 'Failed to enable biometric authentication');
+      }
+    } else {
+      await disableBiometric();
+      setBiometricEnabled(false);
+      setError(null);
     }
   };
 
@@ -149,44 +193,72 @@ export default function ProfileScreen() {
           <Text style={styles.sectionDescription}>
             Select the wellness areas you'd like to focus on
           </Text>
-          {HEALTH_GOALS.map((goal) => {
-            const Icon = goal.icon;
-            const isSelected = selectedGoals.includes(goal.id);
-            return (
-              <TouchableOpacity
-                key={goal.id}
-                style={[styles.goalCard, isSelected && styles.goalCardSelected]}
-                onPress={() => toggleGoal(goal.id)}
-              >
-                <View style={[styles.goalIcon, isSelected && styles.goalIconSelected]}>
-                  <Icon size={24} color={isSelected ? '#FFFFFF' : '#4A7C2E'} />
-                </View>
-                <Text style={[styles.goalLabel, isSelected && styles.goalLabelSelected]}>
-                  {goal.label}
-                </Text>
-                <View
-                  style={[styles.checkbox, isSelected && styles.checkboxSelected]}
+          <View style={styles.goalsGrid}>
+            {HEALTH_GOALS.map((goal) => {
+              const isSelected = selectedGoals.includes(goal);
+              return (
+                <TouchableOpacity
+                  key={goal}
+                  style={[styles.goalChip, isSelected && styles.goalChipSelected]}
+                  onPress={() => toggleGoal(goal)}
                 >
-                  {isSelected && <View style={styles.checkboxInner} />}
-                </View>
-              </TouchableOpacity>
-            );
-          })}
+                  <Text style={[styles.goalChipText, isSelected && styles.goalChipTextSelected]}>
+                    {goal}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Settings</Text>
-          <TouchableOpacity style={styles.settingRow}>
-            <Settings size={20} color="#5A6C4A" />
-            <Text style={styles.settingLabel}>Notification Preferences</Text>
-            <ChevronRight size={20} color="#9CA3AF" />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.settingRow}>
-            <Settings size={20} color="#5A6C4A" />
-            <Text style={styles.settingLabel}>Privacy Settings</Text>
-            <ChevronRight size={20} color="#9CA3AF" />
+          <Text style={styles.sectionTitle}>Security</Text>
+
+          {biometricCapabilities?.isAvailable && Platform.OS !== 'web' && (
+            <>
+              <View style={styles.settingRow}>
+                <Fingerprint size={20} color="#5A6C4A" />
+                <Text style={styles.settingLabel}>
+                  {biometricCapabilities.biometricType}
+                </Text>
+                <Switch
+                  value={biometricEnabled}
+                  onValueChange={handleBiometricToggle}
+                  trackColor={{ false: '#E5E7EB', true: '#7FA957' }}
+                  thumbColor={biometricEnabled ? '#4A7C2E' : '#f4f3f4'}
+                />
+              </View>
+
+              {!biometricEnabled && (
+                <View style={styles.biometricPasswordSection}>
+                  <Text style={styles.biometricPasswordLabel}>
+                    Enter your password to enable {biometricCapabilities.biometricType}:
+                  </Text>
+                  <TextInput
+                    style={styles.biometricPasswordInput}
+                    placeholder="Password"
+                    placeholderTextColor="#9CA3AF"
+                    value={password}
+                    onChangeText={setPassword}
+                    secureTextEntry
+                    autoCapitalize="none"
+                  />
+                </View>
+              )}
+            </>
+          )}
+
+          <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
+            <LogOut size={20} color="#DC2626" />
+            <Text style={styles.signOutText}>Sign Out</Text>
           </TouchableOpacity>
         </View>
+
+        {error && (
+          <View style={styles.errorContainer}>
+            <Text style={styles.errorText}>{error}</Text>
+          </View>
+        )}
 
         <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
           <Text style={styles.saveButtonText}>Save Profile</Text>
@@ -205,6 +277,16 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F5F8F3',
+  },
+  centerContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 16,
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#5A6C4A',
   },
   scrollContent: {
     paddingBottom: 40,
@@ -373,5 +455,78 @@ const styles = StyleSheet.create({
   footerSubtext: {
     fontSize: 12,
     color: '#9CA3AF',
+  },
+  goalsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  goalChip: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderWidth: 2,
+    borderColor: '#E5E7EB',
+  },
+  goalChipSelected: {
+    backgroundColor: '#4A7C2E',
+    borderColor: '#4A7C2E',
+  },
+  goalChipText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#5A6C4A',
+  },
+  goalChipTextSelected: {
+    color: '#FFFFFF',
+  },
+  biometricPasswordSection: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 16,
+    marginTop: 12,
+    gap: 12,
+  },
+  biometricPasswordLabel: {
+    fontSize: 14,
+    color: '#5A6C4A',
+  },
+  biometricPasswordInput: {
+    fontSize: 16,
+    color: '#2D3E1F',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: '#F5F8F3',
+    borderRadius: 12,
+  },
+  signOutButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 16,
+    marginTop: 12,
+    gap: 12,
+    borderWidth: 1,
+    borderColor: '#FEE2E2',
+  },
+  signOutText: {
+    flex: 1,
+    fontSize: 16,
+    color: '#DC2626',
+    fontWeight: '600',
+  },
+  errorContainer: {
+    backgroundColor: '#FEE2E2',
+    padding: 12,
+    borderRadius: 8,
+    marginHorizontal: 20,
+    marginBottom: 16,
+  },
+  errorText: {
+    color: '#DC2626',
+    fontSize: 14,
+    fontWeight: '500',
   },
 });

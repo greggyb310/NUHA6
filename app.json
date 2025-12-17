@@ -14,7 +14,8 @@
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "This app needs your location to show nearby nature spots on the map.",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "This app needs your location to show nearby nature spots on the map.",
-        "NSMicrophoneUsageDescription": "This app needs microphone access for voice conversations with your nature therapy coach."
+        "NSMicrophoneUsageDescription": "This app needs microphone access for voice conversations with your nature therapy coach.",
+        "NSFaceIDUsageDescription": "Enable Face ID to quickly and securely sign in to NatureUP Health."
       }
     },
     "android": {
