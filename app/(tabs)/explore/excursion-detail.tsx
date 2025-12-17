@@ -4,8 +4,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
 import { supabase } from '@/services/supabase';
 import { ArrowLeft, MapPin, Clock, Navigation as NavigationIcon } from 'lucide-react-native';
-import MapScreen from '@/components/map-screen';
 import { LoadingScreen } from '@/components/loading-screen';
+import MinimalWeather from '@/components/minimal-weather';
+import { getCurrentWeather, WeatherData } from '@/services/weather';
 
 interface Excursion {
   id: string;
@@ -33,6 +34,8 @@ export default function ExcursionDetailScreen() {
   const [error, setError] = useState<string | null>(null);
   const [stepsExpanded, setStepsExpanded] = useState(false);
   const [contentReady, setContentReady] = useState(false);
+  const [weather, setWeather] = useState<WeatherData | null>(null);
+  const [weatherLoading, setWeatherLoading] = useState(true);
 
   useEffect(() => {
     loadExcursion();
@@ -46,6 +49,24 @@ export default function ExcursionDetailScreen() {
       return () => clearTimeout(timer);
     }
   }, [loading, excursion]);
+
+  useEffect(() => {
+    const fetchWeather = async () => {
+      if (excursion) {
+        const location = excursion.route_data?.start_location || excursion.route_data?.waypoints?.[0];
+        if (location) {
+          setWeatherLoading(true);
+          const weatherData = await getCurrentWeather(location.lat, location.lng);
+          setWeather(weatherData);
+          setWeatherLoading(false);
+        } else {
+          setWeatherLoading(false);
+        }
+      }
+    };
+
+    fetchWeather();
+  }, [excursion]);
 
   const loadExcursion = async () => {
     try {
@@ -152,9 +173,7 @@ export default function ExcursionDetailScreen() {
       </View>
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
-        <View style={styles.mapContainer}>
-          <MapScreen />
-        </View>
+        <MinimalWeather weather={weather} loading={weatherLoading} />
 
         <View style={styles.metricsCard}>
           {excursion.duration_minutes && (
@@ -282,12 +301,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#C00',
     textAlign: 'center',
-  },
-  mapContainer: {
-    height: 250,
-    backgroundColor: '#E5E7EB',
-    borderBottomWidth: 1,
-    borderBottomColor: '#D1D5DB',
   },
   cardHeader: {
     flexDirection: 'row',
