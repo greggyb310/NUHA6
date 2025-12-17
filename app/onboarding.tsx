@@ -3,47 +3,58 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingVi
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { getCurrentUser } from '@/services/auth';
-import { createUserProfile } from '@/services/user-profile';
+import { updateUserProfile } from '@/services/user-profile';
 
-const HEALTH_GOALS = [
-  'Reduce stress',
-  'Improve sleep',
-  'Boost mood',
-  'Increase energy',
-  'Connect with nature',
-  'Build mindfulness',
-  'Get more exercise',
-  'Improve mental clarity',
+const FITNESS_LEVELS = ['Beginner', 'Intermediate', 'Advanced'];
+const MOBILITY_LEVELS = ['Limited', 'Moderate', 'Full'];
+
+const ACTIVITY_PREFERENCES = [
+  'Walking',
+  'Hiking',
+  'Trail Running',
+  'Road Biking',
+  'Mountain Biking',
+  'Swimming',
+  'Boating',
+];
+
+const THERAPY_PREFERENCES = [
+  'Meditation',
+  'Breath Work',
+  'Sensory Immersion',
+  'Forest Bathing',
+  'Nature Journaling',
+  'Reconnect to Awe',
 ];
 
 export default function OnboardingScreen() {
   const router = useRouter();
-  const [fullName, setFullName] = useState('');
-  const [selectedGoals, setSelectedGoals] = useState<string[]>([]);
+  const [age, setAge] = useState('');
+  const [fitnessLevel, setFitnessLevel] = useState<string | null>(null);
+  const [mobilityLevel, setMobilityLevel] = useState<string | null>(null);
+  const [selectedActivities, setSelectedActivities] = useState<string[]>([]);
+  const [selectedTherapies, setSelectedTherapies] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const toggleGoal = (goal: string) => {
-    if (selectedGoals.includes(goal)) {
-      setSelectedGoals(selectedGoals.filter((g) => g !== goal));
+  const toggleActivity = (activity: string) => {
+    if (selectedActivities.includes(activity)) {
+      setSelectedActivities(selectedActivities.filter((a) => a !== activity));
     } else {
-      setSelectedGoals([...selectedGoals, goal]);
+      setSelectedActivities([...selectedActivities, activity]);
+    }
+  };
+
+  const toggleTherapy = (therapy: string) => {
+    if (selectedTherapies.includes(therapy)) {
+      setSelectedTherapies(selectedTherapies.filter((t) => t !== therapy));
+    } else {
+      setSelectedTherapies([...selectedTherapies, therapy]);
     }
   };
 
   const handleComplete = async () => {
     setError(null);
-
-    if (!fullName.trim()) {
-      setError('Please enter your name');
-      return;
-    }
-
-    if (selectedGoals.length === 0) {
-      setError('Please select at least one health goal');
-      return;
-    }
-
     setLoading(true);
 
     const user = await getCurrentUser();
@@ -54,16 +65,33 @@ export default function OnboardingScreen() {
       return;
     }
 
-    const profile = await createUserProfile(user.id, fullName, selectedGoals);
+    const ageNumber = age ? parseInt(age, 10) : undefined;
+    if (age && (isNaN(ageNumber!) || ageNumber! < 13 || ageNumber! > 120)) {
+      setError('Please enter a valid age between 13 and 120');
+      setLoading(false);
+      return;
+    }
+
+    const profile = await updateUserProfile(user.id, {
+      age: ageNumber,
+      fitness_level: fitnessLevel || undefined,
+      mobility_level: mobilityLevel || undefined,
+      activity_preferences: selectedActivities.length > 0 ? selectedActivities : undefined,
+      therapy_preferences: selectedTherapies.length > 0 ? selectedTherapies : undefined,
+    });
 
     if (!profile) {
-      setError('Failed to create profile. Please try again.');
+      setError('Failed to save profile. Please try again.');
       setLoading(false);
       return;
     }
 
     router.replace('/(tabs)');
     setLoading(false);
+  };
+
+  const handleSkip = () => {
+    router.replace('/(tabs)');
   };
 
   return (
@@ -74,41 +102,103 @@ export default function OnboardingScreen() {
       >
         <ScrollView contentContainerStyle={styles.scrollContent}>
           <View style={styles.header}>
-            <Text style={styles.title}>Let's personalize your experience</Text>
-            <Text style={styles.subtitle}>Tell us about yourself to get started</Text>
+            <Text style={styles.title}>Build Your Profile</Text>
+            <Text style={styles.subtitle}>Help us personalize your outdoor wellness journey</Text>
           </View>
 
           <View style={styles.form}>
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>What's your name?</Text>
+              <Text style={styles.sectionTitle}>Age (Optional)</Text>
               <TextInput
                 style={styles.input}
-                placeholder="Enter your full name"
+                placeholder="Enter your age"
                 placeholderTextColor="#5A6C4A"
-                value={fullName}
-                onChangeText={setFullName}
-                autoCapitalize="words"
-                autoComplete="name"
+                value={age}
+                onChangeText={setAge}
+                keyboardType="number-pad"
                 editable={!loading}
               />
             </View>
 
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>What are your wellness goals?</Text>
-              <Text style={styles.sectionSubtitle}>Select all that apply</Text>
-
-              <View style={styles.goalsGrid}>
-                {HEALTH_GOALS.map((goal) => {
-                  const isSelected = selectedGoals.includes(goal);
+              <Text style={styles.sectionTitle}>Fitness Level (Optional)</Text>
+              <View style={styles.optionsRow}>
+                {FITNESS_LEVELS.map((level) => {
+                  const isSelected = fitnessLevel === level;
                   return (
                     <TouchableOpacity
-                      key={goal}
-                      style={[styles.goalChip, isSelected && styles.goalChipSelected]}
-                      onPress={() => toggleGoal(goal)}
+                      key={level}
+                      style={[styles.optionButton, isSelected && styles.optionButtonSelected]}
+                      onPress={() => setFitnessLevel(level)}
                       disabled={loading}
                     >
-                      <Text style={[styles.goalChipText, isSelected && styles.goalChipTextSelected]}>
-                        {goal}
+                      <Text style={[styles.optionButtonText, isSelected && styles.optionButtonTextSelected]}>
+                        {level}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Mobility Level (Optional)</Text>
+              <View style={styles.optionsRow}>
+                {MOBILITY_LEVELS.map((level) => {
+                  const isSelected = mobilityLevel === level;
+                  return (
+                    <TouchableOpacity
+                      key={level}
+                      style={[styles.optionButton, isSelected && styles.optionButtonSelected]}
+                      onPress={() => setMobilityLevel(level)}
+                      disabled={loading}
+                    >
+                      <Text style={[styles.optionButtonText, isSelected && styles.optionButtonTextSelected]}>
+                        {level}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Activity Preferences (Optional)</Text>
+              <Text style={styles.sectionSubtitle}>Select all that apply</Text>
+              <View style={styles.chipsGrid}>
+                {ACTIVITY_PREFERENCES.map((activity) => {
+                  const isSelected = selectedActivities.includes(activity);
+                  return (
+                    <TouchableOpacity
+                      key={activity}
+                      style={[styles.chip, isSelected && styles.chipSelected]}
+                      onPress={() => toggleActivity(activity)}
+                      disabled={loading}
+                    >
+                      <Text style={[styles.chipText, isSelected && styles.chipTextSelected]}>
+                        {activity}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Therapy Preferences (Optional)</Text>
+              <Text style={styles.sectionSubtitle}>Select all that apply</Text>
+              <View style={styles.chipsGrid}>
+                {THERAPY_PREFERENCES.map((therapy) => {
+                  const isSelected = selectedTherapies.includes(therapy);
+                  return (
+                    <TouchableOpacity
+                      key={therapy}
+                      style={[styles.chip, isSelected && styles.chipSelected]}
+                      onPress={() => toggleTherapy(therapy)}
+                      disabled={loading}
+                    >
+                      <Text style={[styles.chipText, isSelected && styles.chipTextSelected]}>
+                        {therapy}
                       </Text>
                     </TouchableOpacity>
                   );
@@ -122,15 +212,25 @@ export default function OnboardingScreen() {
               </View>
             )}
 
-            <TouchableOpacity
-              style={[styles.button, loading && styles.buttonDisabled]}
-              onPress={handleComplete}
-              disabled={loading}
-            >
-              <Text style={styles.buttonText}>
-                {loading ? 'Setting up...' : 'Complete Setup'}
-              </Text>
-            </TouchableOpacity>
+            <View style={styles.buttonContainer}>
+              <TouchableOpacity
+                style={[styles.button, loading && styles.buttonDisabled]}
+                onPress={handleComplete}
+                disabled={loading}
+              >
+                <Text style={styles.buttonText}>
+                  {loading ? 'Saving...' : 'Complete Setup'}
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.skipButton}
+                onPress={handleSkip}
+                disabled={loading}
+              >
+                <Text style={styles.skipButtonText}>Skip for now</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -149,6 +249,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     padding: 24,
+    paddingBottom: 40,
   },
   header: {
     marginBottom: 32,
@@ -189,12 +290,40 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E5E7EB',
   },
-  goalsGrid: {
+  optionsRow: {
+    flexDirection: 'row',
+    gap: 12,
+    flexWrap: 'wrap',
+  },
+  optionButton: {
+    flex: 1,
+    minWidth: 90,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderWidth: 2,
+    borderColor: '#E5E7EB',
+    alignItems: 'center',
+  },
+  optionButtonSelected: {
+    backgroundColor: '#4A7C2E',
+    borderColor: '#4A7C2E',
+  },
+  optionButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#5A6C4A',
+  },
+  optionButtonTextSelected: {
+    color: '#FFFFFF',
+  },
+  chipsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 12,
   },
-  goalChip: {
+  chip: {
     backgroundColor: '#FFFFFF',
     borderRadius: 20,
     paddingVertical: 10,
@@ -202,16 +331,16 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#E5E7EB',
   },
-  goalChipSelected: {
+  chipSelected: {
     backgroundColor: '#4A7C2E',
     borderColor: '#4A7C2E',
   },
-  goalChipText: {
+  chipText: {
     fontSize: 14,
     fontWeight: '600',
     color: '#5A6C4A',
   },
-  goalChipTextSelected: {
+  chipTextSelected: {
     color: '#FFFFFF',
   },
   errorContainer: {
@@ -224,12 +353,15 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
   },
+  buttonContainer: {
+    gap: 12,
+    marginTop: 8,
+  },
   button: {
     backgroundColor: '#4A7C2E',
     borderRadius: 12,
     padding: 16,
     alignItems: 'center',
-    marginTop: 8,
   },
   buttonDisabled: {
     opacity: 0.6,
@@ -238,5 +370,16 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '700',
+  },
+  skipButton: {
+    backgroundColor: 'transparent',
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+  },
+  skipButtonText: {
+    color: '#5A6C4A',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

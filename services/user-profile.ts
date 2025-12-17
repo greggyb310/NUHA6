@@ -6,6 +6,11 @@ export interface UserProfile {
   username: string | null;
   email: string | null;
   full_name: string | null;
+  age: number | null;
+  fitness_level: string | null;
+  mobility_level: string | null;
+  activity_preferences: string[] | null;
+  therapy_preferences: string[] | null;
   health_goals: string[] | null;
   preferences: Record<string, unknown> | null;
   created_at: string;
@@ -56,6 +61,11 @@ export async function updateUserProfile(
   updates: {
     full_name?: string;
     email?: string;
+    age?: number;
+    fitness_level?: string;
+    mobility_level?: string;
+    activity_preferences?: string[];
+    therapy_preferences?: string[];
     health_goals?: string[];
     preferences?: Record<string, unknown>;
   }

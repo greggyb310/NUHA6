@@ -7,6 +7,7 @@ import { signUp } from '@/services/auth';
 export default function SignUpScreen() {
   const router = useRouter();
   const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -25,6 +26,11 @@ export default function SignUpScreen() {
       return;
     }
 
+    if (email && !email.includes('@')) {
+      setError('Please enter a valid email address');
+      return;
+    }
+
     if (password !== confirmPassword) {
       setError('Passwords do not match');
       return;
@@ -37,7 +43,7 @@ export default function SignUpScreen() {
 
     setLoading(true);
 
-    const { user, error: signUpError } = await signUp({ username, password });
+    const { user, error: signUpError } = await signUp({ username, password, email: email || undefined });
 
     if (signUpError) {
       setError(signUpError);
@@ -75,6 +81,21 @@ export default function SignUpScreen() {
                 onChangeText={setUsername}
                 autoCapitalize="none"
                 autoComplete="username"
+                editable={!loading}
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Email (Optional)</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Enter your email"
+                placeholderTextColor="#5A6C4A"
+                value={email}
+                onChangeText={setEmail}
+                autoCapitalize="none"
+                keyboardType="email-address"
+                autoComplete="email"
                 editable={!loading}
               />
             </View>

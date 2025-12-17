@@ -9,6 +9,7 @@ export interface AuthUser {
 export interface SignUpData {
   username: string;
   password: string;
+  email?: string;
 }
 
 export interface SignInData {
@@ -42,6 +43,7 @@ export async function signUp(data: SignUpData): Promise<{ user: AuthUser | null;
       .insert({
         user_id: authData.user.id,
         username: data.username.toLowerCase(),
+        email: data.email || null,
       });
 
     if (profileError) {
