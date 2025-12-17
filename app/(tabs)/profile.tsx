@@ -1,28 +1,123 @@
-import { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert } from 'react-native';
+import { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { User, Heart, Target, Moon, Zap, Settings, ChevronRight } from 'lucide-react-native';
+import { useRouter } from 'expo-router';
+import { User, LogOut } from 'lucide-react-native';
+import { getCurrentUser, signOut } from '@/services/auth';
+import { getUserProfile, updateUserProfile } from '@/services/user-profile';
 
 const HEALTH_GOALS = [
-  { id: 'stress', label: 'Reduce Stress', icon: Heart },
-  { id: 'sleep', label: 'Improve Sleep', icon: Moon },
-  { id: 'energy', label: 'Boost Energy', icon: Zap },
-  { id: 'focus', label: 'Enhance Focus', icon: Target },
+  'Reduce stress',
+  'Improve sleep',
+  'Boost mood',
+  'Increase energy',
+  'Connect with nature',
+  'Build mindfulness',
+  'Get more exercise',
+  'Improve mental clarity',
 ];
 
 export default function ProfileScreen() {
+  const router = useRouter();
   const [name, setName] = useState('');
   const [selectedGoals, setSelectedGoals] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [email, setEmail] = useState('');
 
-  const toggleGoal = (goalId: string) => {
+  useEffect(() => {
+    loadProfile();
+  }, []);
+
+  const loadProfile = async () => {
+    try {
+      setLoading(true);
+      const user = await getCurrentUser();
+
+      if (!user) {
+        router.replace('/sign-in');
+        return;
+      }
+
+      setEmail(user.email);
+
+      const profile = await getUserProfile(user.id);
+
+      if (profile) {
+        setName(profile.full_name || '');
+        setSelectedGoals(profile.health_goals || []);
+      }
+    } catch (err) {
+      setError('Failed to load profile');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const toggleGoal = (goal: string) => {
     setSelectedGoals((prev) =>
-      prev.includes(goalId) ? prev.filter((id) => id !== goalId) : [...prev, goalId]
+      prev.includes(goal) ? prev.filter((g) => g !== goal) : [...prev, goal]
     );
   };
 
-  const handleSave = () => {
-    Alert.alert('Coming Soon', 'Profile saving will be available in the next update.');
+  const handleSave = async () => {
+    if (!name.trim()) {
+      setError('Please enter your name');
+      return;
+    }
+
+    if (selectedGoals.length === 0) {
+      setError('Please select at least one health goal');
+      return;
+    }
+
+    setSaving(true);
+    setError(null);
+
+    const user = await getCurrentUser();
+
+    if (!user) {
+      setError('Authentication error');
+      setSaving(false);
+      return;
+    }
+
+    const updatedProfile = await updateUserProfile(user.id, {
+      full_name: name,
+      health_goals: selectedGoals,
+    });
+
+    if (!updatedProfile) {
+      setError('Failed to save profile');
+      setSaving(false);
+      return;
+    }
+
+    setSaving(false);
   };
+
+  const handleSignOut = async () => {
+    const { error: signOutError } = await signOut();
+
+    if (signOutError) {
+      setError('Failed to sign out');
+      return;
+    }
+
+    router.replace('/sign-in');
+  };
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <View style={styles.centerContainer}>
+          <ActivityIndicator size="large" color="#4A7C2E" />
+          <Text style={styles.loadingText}>Loading profile...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
