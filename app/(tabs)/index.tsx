@@ -194,19 +194,19 @@ const styles = StyleSheet.create({
     color: '#4A7C2E',
     textAlign: 'center',
     marginHorizontal: 24,
-    marginBottom: 20,
+    marginBottom: 8,
   },
   loadingContainer: {
     marginHorizontal: 20,
-    marginBottom: 24,
-    padding: 40,
+    marginBottom: 16,
+    padding: 20,
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
     alignItems: 'center',
   },
   photoCard: {
     marginHorizontal: 20,
-    marginBottom: 24,
+    marginBottom: 16,
     borderRadius: 16,
     overflow: 'hidden',
     backgroundColor: '#FFFFFF',
@@ -228,7 +228,7 @@ const styles = StyleSheet.create({
   },
   quoteCard: {
     marginHorizontal: 20,
-    marginBottom: 24,
+    marginBottom: 16,
     padding: 16,
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
@@ -255,7 +255,7 @@ const styles = StyleSheet.create({
   },
   featuresSection: {
     paddingHorizontal: 20,
-    paddingVertical: 24,
+    paddingVertical: 8,
   },
   featureCard: {
     flexDirection: 'row',
