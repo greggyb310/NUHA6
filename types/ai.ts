@@ -2,10 +2,16 @@ export type AiAction =
   | 'health_coach_message'
   | 'excursion_plan';
 
+export type ChatMessage = {
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+};
+
 export type AiRequest = {
   action: AiAction;
   input: Record<string, unknown>;
   context?: Record<string, unknown>;
+  conversation_history?: ChatMessage[];
 };
 
 export type AiResponse<T = unknown> = {

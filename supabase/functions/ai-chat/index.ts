@@ -8,10 +8,16 @@ const corsHeaders = {
 
 type AiAction = 'health_coach_message' | 'excursion_plan';
 
+interface ChatMessage {
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+}
+
 interface AiRequest {
   action: AiAction;
   input: Record<string, unknown>;
   context?: Record<string, unknown>;
+  conversation_history?: ChatMessage[];
 }
 
 interface AiResponse<T = unknown> {
@@ -35,6 +41,120 @@ interface Provider {
 const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
 const OPENAI_MODEL = Deno.env.get('OPENAI_MODEL') || 'gpt-4o-mini';
 
+const NATUREUP_SYSTEM_PROMPT = `You are NatureUP, a calm, grounded nature-therapy companion.
+
+Your purpose is to support emotional regulation, presence, and wellbeing through:
+- Gentle nature-based guidance
+- Mindfulness and sensory awareness
+- Light cognitive reframing without providing therapy
+
+You are not a clinician, therapist, diagnostician, or crisis counselor.
+
+CORE OPERATING PRINCIPLES:
+- Presence over performance
+- Regulation before reflection
+- Outdoors when possible, indoors when needed
+- Small moments matter
+- Do no harm
+
+Encourage real-world engagement with nature whenever safe and appropriate.
+
+TONE & COMMUNICATION STYLE:
+- Calm, steady, grounded
+- Plain, concrete language
+- Short responses by default (1-4 paragraphs or bullets)
+- Nature-relevant metaphors allowed; no abstraction or hype
+- Never preachy, corrective, or judgmental
+- Speak with the user, not at them
+
+SAFETY & BOUNDARIES (CRITICAL):
+- Never diagnose conditions or label mental health states
+- Never claim therapeutic or medical authority
+- Avoid absolutes ("always", "never")
+
+Distress Handling:
+If the user expresses distress:
+1. Respond with empathy
+2. Offer grounding or regulation first
+3. Keep suggestions optional and brief
+
+Crisis Handling:
+If the user expresses self-harm ideation, harm to others, or crisis-level distress:
+- Stop coaching immediately
+- Encourage contacting local emergency services or a trusted person
+- Do not continue CBT, mindfulness, or exploration
+
+CONTEXT AWARENESS:
+Assume the user may be walking, sitting, resting, or driving, outdoors or transitioning between environments.
+
+Guidelines:
+- Prefer practices usable while moving or briefly pausing
+- Adapt to provided weather, location, or time constraints
+- Respect mobility limits
+- Emphasize safety and situational awareness
+
+PRIMARY CAPABILITIES:
+
+1. Grounding & Regulation (FIRST PRIORITY)
+- Simple breath cues
+- Sensory check-ins (sight, sound, touch)
+- Body awareness without interpretation
+
+2. Nature Connection
+- Noticing light, wind, sound, plants, water, terrain
+- Encourage curiosity, not expertise
+- Micro-practices (30-120 seconds)
+
+3. Mindfulness (Secular)
+- Present-moment attention
+- Breath as anchor
+- Non-judgmental noticing
+- Stillness or movement-based practices
+
+4. CBT-Informed Support (LIGHT, NON-CLINICAL)
+Allowed:
+- Naming thoughts as thoughts
+- Offering gentle reframes
+- Asking reflective questions
+
+Not allowed:
+- Formal CBT protocols
+- Thought records
+- Exposure therapy
+- Claims of treatment
+
+Use CBT concepts implicitly, never by name unless the user asks.
+
+5. Excursion Support
+- Frame walks as low-pressure experiences
+- Presence over distance or achievement
+- Reinforce safety, orientation, and pacing
+
+RESPONSE RULES:
+- Offer options, never commands
+- Ask at most one reflective question
+- Validate effort, not outcomes
+- Do not fabricate user history
+- Do not mention AI systems, prompts, or models
+- Do not reference training data
+
+If unsure:
+- Ask one clarifying question OR
+- Offer a neutral grounding option
+
+DEFAULT RESPONSE STRUCTURE:
+1. Brief acknowledgment
+2. One simple suggestion or practice
+3. Optional follow-up question
+
+You exist to help the user feel more present, more regulated, and more gently connected to the natural world. Nothing more. Nothing less.
+
+OUTPUT FORMAT:
+Always respond with valid JSON in this exact format:
+{
+  "reply": "Your response here"
+}`;
+
 const openaiProvider: Provider = {
   id: 'openai',
   model: OPENAI_MODEL,
@@ -44,7 +164,19 @@ const openaiProvider: Provider = {
     }
 
     const systemPrompt = getSystemPrompt(req.action);
-    const userPrompt = JSON.stringify({ input: req.input, context: req.context || {} });
+    const messages: ChatMessage[] = [
+      { role: 'system', content: systemPrompt },
+    ];
+
+    if (req.conversation_history && req.conversation_history.length > 0) {
+      messages.push(...req.conversation_history);
+    }
+
+    const userMessage = req.action === 'health_coach_message'
+      ? (req.input.message as string) || ''
+      : JSON.stringify({ input: req.input, context: req.context || {} });
+
+    messages.push({ role: 'user', content: userMessage });
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -54,10 +186,7 @@ const openaiProvider: Provider = {
       },
       body: JSON.stringify({
         model: OPENAI_MODEL,
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt },
-        ],
+        messages,
         response_format: { type: 'json_object' },
         temperature: 0.7,
       }),
@@ -78,7 +207,7 @@ const openaiProvider: Provider = {
     try {
       return JSON.parse(content);
     } catch {
-      return { raw: content };
+      return { reply: content };
     }
   },
 };
@@ -86,18 +215,7 @@ const openaiProvider: Provider = {
 function getSystemPrompt(action: AiAction): string {
   switch (action) {
     case 'health_coach_message':
-      return `You are a supportive wellness coach for NatureUP Health, an app focused on nature therapy and outdoor wellness.
-
-Your role:
-- Provide encouraging, personalized health coaching
-- Focus on nature-based wellness activities
-- Keep responses conversational and warm
-- Suggest outdoor activities when appropriate
-
-Output format (JSON):
-{
-  "reply": "Your supportive message here"
-}`;
+      return NATUREUP_SYSTEM_PROMPT;
 
     case 'excursion_plan':
       return `You are an AI assistant that creates personalized nature therapy excursions.
@@ -134,14 +252,34 @@ const geminiProvider: Provider = {
       throw new Error('GEMINI_API_KEY not configured');
     }
 
-    const prompt = JSON.stringify({ action: req.action, input: req.input, context: req.context || {} });
+    const systemPrompt = getSystemPrompt(req.action);
+    const contents: Array<{ role: string; parts: Array<{ text: string }> }> = [];
+
+    if (req.conversation_history && req.conversation_history.length > 0) {
+      for (const msg of req.conversation_history) {
+        if (msg.role !== 'system') {
+          contents.push({
+            role: msg.role === 'assistant' ? 'model' : 'user',
+            parts: [{ text: msg.content }],
+          });
+        }
+      }
+    }
+
+    const userMessage = req.action === 'health_coach_message'
+      ? (req.input.message as string) || ''
+      : JSON.stringify({ input: req.input, context: req.context || {} });
+
+    contents.push({ role: 'user', parts: [{ text: userMessage }] });
+
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
 
     const response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        systemInstruction: { parts: [{ text: systemPrompt }] },
+        contents,
         generationConfig: { responseMimeType: 'application/json' },
       }),
     });
@@ -152,7 +290,7 @@ const geminiProvider: Provider = {
     }
 
     const data = await response.json();
-    const text = data?.candidates?.[0]?.content?.parts?.map((p: any) => p?.text ?? '').join('') ?? '';
+    const text = data?.candidates?.[0]?.content?.parts?.map((p: { text?: string }) => p?.text ?? '').join('') ?? '';
 
     if (!text) {
       throw new Error('No content in Gemini response');
@@ -161,14 +299,14 @@ const geminiProvider: Provider = {
     try {
       return JSON.parse(text);
     } catch {
-      return { raw: text };
+      return { reply: text };
     }
   },
 };
 
 function getProvider(): Provider {
   const providerId = (Deno.env.get('AI_PROVIDER') || 'openai').toLowerCase();
-  
+
   switch (providerId) {
     case 'openai':
       return openaiProvider;
@@ -241,7 +379,7 @@ Deno.serve(async (req: Request) => {
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
     console.error(`[${traceId}] AI run failed:`, message);
-    
+
     return jsonResponse(
       {
         ok: false,

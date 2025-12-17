@@ -1,5 +1,5 @@
 import { Tabs } from 'expo-router';
-import { MapPin, User } from 'lucide-react-native';
+import { MapPin, MessageCircle, User } from 'lucide-react-native';
 
 export default function TabLayout() {
   return (
@@ -19,6 +19,15 @@ export default function TabLayout() {
           title: 'Map',
           tabBarIcon: ({ size, color }) => (
             <MapPin size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="chat"
+        options={{
+          title: 'Chat',
+          tabBarIcon: ({ size, color }) => (
+            <MessageCircle size={size} color={color} />
           ),
         }}
       />
