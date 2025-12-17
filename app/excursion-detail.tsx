@@ -33,10 +33,20 @@ export default function ExcursionDetailScreen() {
   const [error, setError] = useState<string | null>(null);
   const [descriptionExpanded, setDescriptionExpanded] = useState(false);
   const [stepsExpanded, setStepsExpanded] = useState(false);
+  const [contentReady, setContentReady] = useState(false);
 
   useEffect(() => {
     loadExcursion();
   }, [id]);
+
+  useEffect(() => {
+    if (!loading && excursion) {
+      const timer = setTimeout(() => {
+        setContentReady(true);
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [loading, excursion]);
 
   const loadExcursion = async () => {
     try {
@@ -63,11 +73,7 @@ export default function ExcursionDetailScreen() {
     }
   };
 
-  if (loading) {
-    return <LoadingScreen message="Loading your nature experience..." />;
-  }
-
-  if (error || !excursion) {
+  if (error || (!excursion && !loading)) {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
         <View style={styles.header}>
@@ -81,6 +87,10 @@ export default function ExcursionDetailScreen() {
         </View>
       </SafeAreaView>
     );
+  }
+
+  if (loading || !contentReady) {
+    return <LoadingScreen message="Loading your nature experience..." />;
   }
 
   const userLocation = userLat && userLng
