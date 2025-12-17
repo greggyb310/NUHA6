@@ -1,7 +1,6 @@
-import { View, Text, StyleSheet, ActivityIndicator, Image, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, Image, Dimensions, Animated } from 'react-native';
 import { BlurView } from 'expo-blur';
-import { useEffect, useState } from 'react';
-import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
+import { useEffect, useState, useRef } from 'react';
 
 const { width, height } = Dimensions.get('window');
 
@@ -44,6 +43,8 @@ interface LoadingScreenProps {
 export function LoadingScreen({ message, progress }: LoadingScreenProps) {
   const [imageIndex, setImageIndex] = useState(0);
   const [quoteIndex, setQuoteIndex] = useState(0);
+  const imageOpacity = useRef(new Animated.Value(1)).current;
+  const quoteOpacity = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     setImageIndex(Math.floor(Math.random() * NATURE_IMAGES.length));
@@ -52,31 +53,48 @@ export function LoadingScreen({ message, progress }: LoadingScreenProps) {
 
   useEffect(() => {
     const interval = setInterval(() => {
-      setImageIndex((prevIndex) => (prevIndex + 1) % NATURE_IMAGES.length);
-      setQuoteIndex((prevIndex) => (prevIndex + 1) % NATURE_QUOTES.length);
+      Animated.timing(imageOpacity, {
+        toValue: 0,
+        duration: 500,
+        useNativeDriver: true,
+      }).start(() => {
+        setImageIndex((prevIndex) => (prevIndex + 1) % NATURE_IMAGES.length);
+        Animated.timing(imageOpacity, {
+          toValue: 1,
+          duration: 500,
+          useNativeDriver: true,
+        }).start();
+      });
+
+      Animated.timing(quoteOpacity, {
+        toValue: 0,
+        duration: 400,
+        useNativeDriver: true,
+      }).start(() => {
+        setQuoteIndex((prevIndex) => (prevIndex + 1) % NATURE_QUOTES.length);
+        Animated.timing(quoteOpacity, {
+          toValue: 1,
+          duration: 400,
+          useNativeDriver: true,
+        }).start();
+      });
     }, 7000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [imageOpacity, quoteOpacity]);
 
   return (
     <View style={styles.container}>
       <Animated.Image
-        key={imageIndex}
         source={NATURE_IMAGES[imageIndex]}
-        style={styles.backgroundImage}
+        style={[styles.backgroundImage, { opacity: imageOpacity }]}
         resizeMode="cover"
-        entering={FadeIn.duration(1000)}
-        exiting={FadeOut.duration(1000)}
       />
 
       <BlurView intensity={30} style={styles.overlay}>
         <View style={styles.content}>
           <Animated.View
-            key={quoteIndex}
-            style={styles.quoteContainer}
-            entering={FadeIn.duration(800)}
-            exiting={FadeOut.duration(800)}
+            style={[styles.quoteContainer, { opacity: quoteOpacity }]}
           >
             <Text style={styles.quote}>"{NATURE_QUOTES[quoteIndex].text}"</Text>
             <Text style={styles.author}>— {NATURE_QUOTES[quoteIndex].author}</Text>
