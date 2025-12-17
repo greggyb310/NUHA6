@@ -76,7 +76,11 @@ export default function HomeScreen() {
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.heroSection}>
           <View style={styles.logoContainer}>
-            <Leaf size={48} color="#4A7C2E" />
+            <Image
+              source={require('@/assets/images/icon.png')}
+              style={styles.logo}
+              resizeMode="contain"
+            />
           </View>
           <Text style={styles.heroTitle}>NatureUp Health</Text>
           <Text style={styles.welcomeText}>Reconnecting with Awe</Text>
@@ -171,11 +175,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 16,
   },
+  logo: {
+    width: 64,
+    height: 64,
+  },
   heroTitle: {
     fontSize: 20,
     fontWeight: '700',
     color: '#2D3E1F',
-    marginBottom: 16,
+    marginBottom: 4,
     textAlign: 'center',
   },
   welcomeText: {
