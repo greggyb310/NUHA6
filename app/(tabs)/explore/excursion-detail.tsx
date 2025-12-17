@@ -152,6 +152,19 @@ export default function ExcursionDetailScreen() {
       </View>
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+        {excursionLocation && (
+          <View style={styles.mapCard}>
+            <MapScreen
+              initialRegion={{
+                latitude: excursionLocation.lat,
+                longitude: excursionLocation.lng,
+                latitudeDelta: 0.01,
+                longitudeDelta: 0.01,
+              }}
+            />
+          </View>
+        )}
+
         <View style={styles.metricsCard}>
           {excursion.duration_minutes && (
             <View style={styles.metricItem}>
@@ -216,19 +229,6 @@ export default function ExcursionDetailScreen() {
                 </Text>
               </TouchableOpacity>
             )}
-          </View>
-        )}
-
-        {excursionLocation && (
-          <View style={styles.mapCard}>
-            <MapScreen
-              initialRegion={{
-                latitude: excursionLocation.lat,
-                longitude: excursionLocation.lng,
-                latitudeDelta: 0.01,
-                longitudeDelta: 0.01,
-              }}
-            />
           </View>
         )}
 
@@ -444,17 +444,12 @@ const styles = StyleSheet.create({
     paddingTop: 5,
   },
   mapCard: {
-    height: 300,
-    marginHorizontal: 20,
-    marginTop: 16,
-    borderRadius: 12,
+    height: 350,
+    marginHorizontal: 0,
+    marginTop: 0,
+    borderRadius: 0,
     overflow: 'hidden',
     backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
   },
   directionsButton: {
     backgroundColor: '#4A7C2E',
