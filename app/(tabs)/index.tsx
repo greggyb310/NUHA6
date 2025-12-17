@@ -64,14 +64,6 @@ export default function HomeScreen() {
             </View>
           </TouchableOpacity>
         </View>
-
-        <TouchableOpacity
-          style={styles.ctaButton}
-          onPress={() => router.push('/(tabs)/chat')}
-        >
-          <MessageCircle size={24} color="#FFFFFF" />
-          <Text style={styles.ctaButtonText}>Start Your Journey</Text>
-        </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );
@@ -103,7 +95,7 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   welcomeText: {
-    fontSize: 32,
+    fontSize: 48,
     fontWeight: '600',
     color: '#4A7C2E',
     marginBottom: 24,
@@ -160,25 +152,5 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#5A6C4A',
     lineHeight: 20,
-  },
-  ctaButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#4A7C2E',
-    marginHorizontal: 20,
-    paddingVertical: 16,
-    borderRadius: 28,
-    gap: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-  ctaButtonText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#FFFFFF',
   },
 });
