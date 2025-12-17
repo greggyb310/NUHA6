@@ -75,7 +75,7 @@ export default function HomeScreen() {
               resizeMode="contain"
             />
           </View>
-          <Text style={styles.welcomeText}>Welcome</Text>
+          <Text style={styles.welcomeText}>Reconnect to AWE</Text>
           <Text style={styles.heroTitle}>NatureUp Health</Text>
           <Text style={styles.heroSubtitle}>
             Your voice-first companion for personalized nature therapy and outdoor wellness
