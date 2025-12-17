@@ -161,6 +161,12 @@ export default function ExcursionDetailScreen() {
                 latitudeDelta: 0.01,
                 longitudeDelta: 0.01,
               }}
+              showNearbyPlaces={false}
+              destination={{
+                latitude: excursionLocation.lat,
+                longitude: excursionLocation.lng,
+                title: excursion.title,
+              }}
             />
           </View>
         )}
