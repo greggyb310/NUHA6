@@ -121,8 +121,8 @@ export default function ExcursionDetailScreen() {
     const label = encodeURIComponent(excursion.title);
 
     const url = Platform.select({
-      ios: `maps://app?daddr=${lat},${lng}&q=${label}`,
-      android: `geo:0,0?q=${lat},${lng}(${label})`,
+      ios: `http://maps.apple.com/?daddr=${lat},${lng}&dirflg=w`,
+      android: `google.navigation:q=${lat},${lng}`,
       default: `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`
     });
 
