@@ -41,29 +41,29 @@ interface LoadingScreenProps {
 }
 
 export function LoadingScreen({ message, progress }: LoadingScreenProps) {
-  const [imageIndex, setImageIndex] = useState(0);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [nextImageIndex, setNextImageIndex] = useState(1);
   const [quoteIndex, setQuoteIndex] = useState(0);
-  const imageOpacity = useRef(new Animated.Value(1)).current;
+  const topImageOpacity = useRef(new Animated.Value(1)).current;
   const quoteOpacity = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
-    setImageIndex(Math.floor(Math.random() * NATURE_IMAGES.length));
+    const randomStart = Math.floor(Math.random() * NATURE_IMAGES.length);
+    setCurrentImageIndex(randomStart);
+    setNextImageIndex((randomStart + 1) % NATURE_IMAGES.length);
     setQuoteIndex(Math.floor(Math.random() * NATURE_QUOTES.length));
   }, []);
 
   useEffect(() => {
     const interval = setInterval(() => {
-      Animated.timing(imageOpacity, {
+      Animated.timing(topImageOpacity, {
         toValue: 0,
-        duration: 500,
+        duration: 1000,
         useNativeDriver: true,
       }).start(() => {
-        setImageIndex((prevIndex) => (prevIndex + 1) % NATURE_IMAGES.length);
-        Animated.timing(imageOpacity, {
-          toValue: 1,
-          duration: 500,
-          useNativeDriver: true,
-        }).start();
+        setCurrentImageIndex(nextImageIndex);
+        setNextImageIndex((nextImageIndex + 1) % NATURE_IMAGES.length);
+        topImageOpacity.setValue(1);
       });
 
       Animated.timing(quoteOpacity, {
@@ -81,13 +81,18 @@ export function LoadingScreen({ message, progress }: LoadingScreenProps) {
     }, 7000);
 
     return () => clearInterval(interval);
-  }, [imageOpacity, quoteOpacity]);
+  }, [topImageOpacity, quoteOpacity, nextImageIndex]);
 
   return (
     <View style={styles.container}>
+      <Image
+        source={NATURE_IMAGES[currentImageIndex]}
+        style={styles.backgroundImage}
+        resizeMode="cover"
+      />
       <Animated.Image
-        source={NATURE_IMAGES[imageIndex]}
-        style={[styles.backgroundImage, { opacity: imageOpacity }]}
+        source={NATURE_IMAGES[nextImageIndex]}
+        style={[styles.backgroundImage, { opacity: topImageOpacity }]}
         resizeMode="cover"
       />
 
