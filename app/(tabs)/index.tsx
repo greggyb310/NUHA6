@@ -1,5 +1,233 @@
+import { useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { MapPin, MessageCircle, Leaf, Navigation, Heart } from 'lucide-react-native';
+import { useRouter } from 'expo-router';
 import MapScreen from '@/components/map-screen';
 
+const { height } = Dimensions.get('window');
+
 export default function HomeScreen() {
-  return <MapScreen />;
+  const router = useRouter();
+  const [showMap, setShowMap] = useState(false);
+
+  if (showMap) {
+    return <MapScreen />;
+  }
+
+  return (
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        <View style={styles.heroSection}>
+          <View style={styles.iconContainer}>
+            <Leaf size={64} color="#4A7C2E" strokeWidth={2} />
+          </View>
+          <Text style={styles.heroTitle}>NatureUP Health</Text>
+          <Text style={styles.heroSubtitle}>
+            Your voice-first companion for personalized nature therapy and outdoor wellness
+          </Text>
+        </View>
+
+        <View style={styles.featuresSection}>
+          <Text style={styles.sectionTitle}>Get Started</Text>
+
+          <TouchableOpacity
+            style={styles.featureCard}
+            onPress={() => router.push('/(tabs)/chat')}
+          >
+            <View style={styles.featureIcon}>
+              <MessageCircle size={28} color="#4A7C2E" />
+            </View>
+            <View style={styles.featureContent}>
+              <Text style={styles.featureTitle}>AI Health Coach</Text>
+              <Text style={styles.featureDescription}>
+                Voice-first wellness guidance and nature therapy recommendations
+              </Text>
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.featureCard}
+            onPress={() => setShowMap(true)}
+          >
+            <View style={styles.featureIcon}>
+              <MapPin size={28} color="#4A7C2E" />
+            </View>
+            <View style={styles.featureContent}>
+              <Text style={styles.featureTitle}>Explore Nature Spots</Text>
+              <Text style={styles.featureDescription}>
+                Discover parks, trails, and outdoor spaces near you
+              </Text>
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.featureCard}
+            onPress={() => router.push('/(tabs)/chat')}
+          >
+            <View style={styles.featureIcon}>
+              <Navigation size={28} color="#4A7C2E" />
+            </View>
+            <View style={styles.featureContent}>
+              <Text style={styles.featureTitle}>Guided Excursions</Text>
+              <Text style={styles.featureDescription}>
+                AI-generated custom routes for your wellness journey
+              </Text>
+            </View>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.benefitsSection}>
+          <Text style={styles.sectionTitle}>Nature Therapy Benefits</Text>
+          <View style={styles.benefitRow}>
+            <Heart size={20} color="#4A7C2E" />
+            <Text style={styles.benefitText}>Reduces stress and anxiety</Text>
+          </View>
+          <View style={styles.benefitRow}>
+            <Heart size={20} color="#4A7C2E" />
+            <Text style={styles.benefitText}>Improves mood and mental clarity</Text>
+          </View>
+          <View style={styles.benefitRow}>
+            <Heart size={20} color="#4A7C2E" />
+            <Text style={styles.benefitText}>Boosts immune system function</Text>
+          </View>
+          <View style={styles.benefitRow}>
+            <Heart size={20} color="#4A7C2E" />
+            <Text style={styles.benefitText}>Enhances sleep quality</Text>
+          </View>
+        </View>
+
+        <TouchableOpacity
+          style={styles.ctaButton}
+          onPress={() => router.push('/(tabs)/chat')}
+        >
+          <MessageCircle size={24} color="#FFFFFF" />
+          <Text style={styles.ctaButtonText}>Start Your Journey</Text>
+        </TouchableOpacity>
+      </ScrollView>
+    </SafeAreaView>
+  );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#F5F8F3',
+  },
+  scrollContent: {
+    paddingBottom: 40,
+  },
+  heroSection: {
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    paddingTop: 40,
+    paddingBottom: 32,
+  },
+  iconContainer: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: 'rgba(74, 124, 46, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  heroTitle: {
+    fontSize: 32,
+    fontWeight: '700',
+    color: '#2D3E1F',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  heroSubtitle: {
+    fontSize: 16,
+    color: '#5A6C4A',
+    textAlign: 'center',
+    lineHeight: 24,
+  },
+  featuresSection: {
+    paddingHorizontal: 20,
+    paddingVertical: 24,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#2D3E1F',
+    marginBottom: 16,
+  },
+  featureCard: {
+    flexDirection: 'row',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  featureIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: 'rgba(74, 124, 46, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  featureContent: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  featureTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#2D3E1F',
+    marginBottom: 4,
+  },
+  featureDescription: {
+    fontSize: 14,
+    color: '#5A6C4A',
+    lineHeight: 20,
+  },
+  benefitsSection: {
+    paddingHorizontal: 20,
+    paddingVertical: 24,
+    backgroundColor: '#FFFFFF',
+    marginHorizontal: 20,
+    borderRadius: 16,
+    marginBottom: 24,
+  },
+  benefitRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    gap: 12,
+  },
+  benefitText: {
+    fontSize: 15,
+    color: '#2D3E1F',
+    flex: 1,
+  },
+  ctaButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#4A7C2E',
+    marginHorizontal: 20,
+    paddingVertical: 16,
+    borderRadius: 28,
+    gap: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  ctaButtonText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+});
