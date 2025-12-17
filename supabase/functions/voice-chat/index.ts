@@ -231,8 +231,16 @@ async function textToSpeech(text: string): Promise<string> {
   }
 
   const audioBuffer = await response.arrayBuffer();
-  const base64Audio = btoa(String.fromCharCode(...new Uint8Array(audioBuffer)));
-  return base64Audio;
+  const uint8Array = new Uint8Array(audioBuffer);
+
+  let binary = '';
+  const chunkSize = 8192;
+  for (let i = 0; i < uint8Array.length; i += chunkSize) {
+    const chunk = uint8Array.subarray(i, i + chunkSize);
+    binary += String.fromCharCode.apply(null, Array.from(chunk));
+  }
+
+  return btoa(binary);
 }
 
 function jsonResponse(data: unknown, status = 200): Response {
