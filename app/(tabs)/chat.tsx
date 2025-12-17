@@ -270,11 +270,7 @@ export default function ChatScreen() {
 
   const renderEmptyState = () => (
     <View style={styles.emptyState}>
-      <View style={styles.emptyIconContainer}>
-        <Leaf size={48} color="#4A7C2E" />
-      </View>
-      <Text style={styles.emptyTitle}>Welcome to NatureUP</Text>
-      <Text style={styles.emptySubtitle}>
+      <Text style={styles.emptyTitle}>
         What would you like to do today?
       </Text>
       <View style={styles.suggestionContainer}>
