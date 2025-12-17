@@ -96,6 +96,9 @@ export async function searchNatureSpotsNearby(
     const supabaseUrl = Constants.expoConfig?.extra?.EXPO_PUBLIC_SUPABASE_URL || process.env.EXPO_PUBLIC_SUPABASE_URL;
     const supabaseAnonKey = Constants.expoConfig?.extra?.EXPO_PUBLIC_SUPABASE_ANON_KEY || process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
 
+    console.log('Nature Spots: Fetching from edge function');
+    console.log('Nature Spots: URL:', `${supabaseUrl}/functions/v1/nearby-places`);
+
     const response = await fetch(
       `${supabaseUrl}/functions/v1/nearby-places`,
       {
@@ -108,8 +111,12 @@ export async function searchNatureSpotsNearby(
       }
     );
 
+    console.log('Nature Spots: Response status:', response.status);
+
     if (!response.ok) {
-      throw new Error('Failed to fetch places from API');
+      const errorText = await response.text();
+      console.error('Nature Spots: API error:', errorText);
+      throw new Error(`Failed to fetch places from API: ${response.status} ${errorText.substring(0, 100)}`);
     }
 
     const data = await response.json();
