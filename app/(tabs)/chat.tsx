@@ -11,6 +11,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Location from 'expo-location';
 import { supabase } from '@/services/supabase';
 import { getCurrentWeather, type WeatherData } from '@/services/weather';
+import { getExcursionPlan } from '@/services/ai';
 import WeatherCard from '@/components/weather-card';
 import MapScreen from '@/components/map-screen';
 
@@ -48,6 +49,7 @@ export default function CreateScreen() {
   const [weatherLoading, setWeatherLoading] = useState(true);
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     loadUserPreferences();
@@ -120,9 +122,78 @@ export default function CreateScreen() {
     }
   };
 
-  const handleCreateExcursion = () => {
+  const handleCreateExcursion = async () => {
+    if (!location) {
+      setError('Location not available. Please enable location permissions.');
+      return;
+    }
+
     setLoading(true);
-    setTimeout(() => setLoading(false), 1000);
+    setError(null);
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        setError('Please sign in to create an excursion.');
+        setLoading(false);
+        return;
+      }
+
+      const preferences = {
+        activities: selectedActivities,
+        energyLevel,
+        weather: weather ? {
+          temp: weather.temperature,
+          condition: weather.condition,
+        } : undefined,
+      };
+
+      const result = await getExcursionPlan({
+        userLocation: {
+          lat: location.coords.latitude,
+          lng: location.coords.longitude,
+        },
+        durationMinutes: duration,
+        preferences,
+      });
+
+      if (!result.ok || !result.result) {
+        setError(result.error?.message || 'Failed to create excursion. Please try again.');
+        setLoading(false);
+        return;
+      }
+
+      const excursionData = result.result;
+
+      const { error: dbError } = await supabase
+        .from('excursions')
+        .insert({
+          user_id: user.id,
+          title: excursionData.title,
+          description: excursionData.description,
+          route_data: {
+            steps: excursionData.steps,
+            location: {
+              lat: location.coords.latitude,
+              lng: location.coords.longitude,
+            },
+          },
+          duration_minutes: excursionData.duration_minutes || duration,
+          distance_km: excursionData.distance_km,
+          difficulty: excursionData.difficulty,
+        });
+
+      if (dbError) {
+        console.error('Error saving excursion:', dbError);
+        setError('Created excursion but failed to save. Please try again.');
+      }
+
+      setLoading(false);
+    } catch (err) {
+      console.error('Error creating excursion:', err);
+      setError('An unexpected error occurred. Please try again.');
+      setLoading(false);
+    }
   };
 
   return (
@@ -233,6 +304,12 @@ export default function CreateScreen() {
           </View>
         </View>
 
+        {error && (
+          <View style={styles.errorContainer}>
+            <Text style={styles.errorText}>{error}</Text>
+          </View>
+        )}
+
         <TouchableOpacity
           style={[styles.createButton, loading && styles.createButtonDisabled]}
           onPress={handleCreateExcursion}
@@ -242,7 +319,7 @@ export default function CreateScreen() {
           {loading ? (
             <ActivityIndicator size="small" color="#FFFFFF" />
           ) : (
-            <Text style={styles.createButtonText}>Generate Personalized Route</Text>
+            <Text style={styles.createButtonText}>Create Experience</Text>
           )}
         </TouchableOpacity>
       </ScrollView>
@@ -409,5 +486,19 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: '#FFFFFF',
+  },
+  errorContainer: {
+    marginHorizontal: 20,
+    marginTop: 16,
+    padding: 12,
+    borderRadius: 8,
+    backgroundColor: '#FEE',
+    borderWidth: 1,
+    borderColor: '#FCC',
+  },
+  errorText: {
+    fontSize: 14,
+    color: '#C00',
+    textAlign: 'center',
   },
 });
