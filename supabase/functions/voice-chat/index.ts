@@ -145,7 +145,11 @@ async function transcribeAudio(audioBase64: string): Promise<string> {
     throw new Error('OPENAI_API_KEY not configured');
   }
 
-  const audioBuffer = Uint8Array.from(atob(audioBase64), c => c.charCodeAt(0));
+  const binaryString = atob(audioBase64);
+  const audioBuffer = new Uint8Array(binaryString.length);
+  for (let i = 0; i < binaryString.length; i++) {
+    audioBuffer[i] = binaryString.charCodeAt(i);
+  }
   const audioBlob = new Blob([audioBuffer], { type: 'audio/m4a' });
 
   const formData = new FormData();
