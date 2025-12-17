@@ -116,23 +116,12 @@ export function VoiceButton({ onRecordingComplete, disabled }: VoiceButtonProps)
         disabled={disabled}
       >
         {isRecording ? (
-          <MicOff size={24} color="#FFFFFF" />
+          <MicOff size={22} color="#FFFFFF" />
         ) : (
-          <Mic size={24} color={disabled ? '#9CA3AF' : '#FFFFFF'} />
+          <Mic size={22} color={disabled ? '#9CA3AF' : '#FFFFFF'} />
         )}
+        {isRecording && <View style={styles.recordingIndicator} />}
       </TouchableOpacity>
-      {isRecording && (
-        <View style={styles.recordingIndicator}>
-          <View style={styles.recordingDot} />
-          {elapsedMs >= COUNTDOWN_START_MS ? (
-            <Text style={styles.countdownText}>
-              {Math.ceil((MAX_RECORDING_DURATION_MS - elapsedMs) / 1000)}s
-            </Text>
-          ) : (
-            <Text style={styles.recordingText}>Recording...</Text>
-          )}
-        </View>
-      )}
       {permissionError && !isRecording && (
         <Text style={styles.errorText}>Microphone access denied</Text>
       )}
@@ -145,24 +134,37 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   button: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     backgroundColor: '#4A7C2E',
     justifyContent: 'center',
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 3,
   },
   buttonRecording: {
     backgroundColor: '#DC2626',
+    shadowColor: '#DC2626',
+    shadowOpacity: 0.3,
   },
   buttonDisabled: {
     backgroundColor: '#E5E7EB',
+    shadowOpacity: 0,
   },
   recordingIndicator: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 8,
-    gap: 6,
+    position: 'absolute',
+    top: -6,
+    right: -6,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: '#DC2626',
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
   },
   recordingDot: {
     width: 8,

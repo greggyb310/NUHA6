@@ -16,7 +16,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Home',
+          title: 'Explore',
           tabBarIcon: ({ size, color }) => (
             <MapPin size={size} color={color} />
           ),
@@ -25,7 +25,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="chat"
         options={{
-          title: 'Chat',
+          title: 'Create',
           tabBarIcon: ({ size, color }) => (
             <MessageCircle size={size} color={color} />
           ),

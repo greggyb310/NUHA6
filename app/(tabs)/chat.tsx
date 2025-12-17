@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Send, Trash2, Leaf } from 'lucide-react-native';
+import { Audio } from 'expo-av';
 import {
   getOrCreateSession,
   getSessionMessages,
@@ -48,7 +49,21 @@ export default function ChatScreen() {
 
   useEffect(() => {
     initializeChat();
+    setupAudio();
   }, []);
+
+  const setupAudio = async () => {
+    try {
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: false,
+        playsInSilentModeIOS: true,
+        staysActiveInBackground: false,
+        shouldDuckAndroid: true,
+      });
+    } catch (error) {
+      console.error('Error setting up audio:', error);
+    }
+  };
 
   const initializeChat = async () => {
     setIsInitializing(true);
@@ -301,7 +316,7 @@ export default function ChatScreen() {
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <Leaf size={24} color="#4A7C2E" />
-          <Text style={styles.headerTitle}>NatureUP</Text>
+          <Text style={styles.headerTitle}>Create</Text>
         </View>
         {messages.length > 0 && (
           <TouchableOpacity onPress={handleClearChat} style={styles.clearButton}>
@@ -339,20 +354,22 @@ export default function ChatScreen() {
         />
 
         <View style={styles.inputContainer}>
-          <VoiceButton
-            onRecordingComplete={handleVoiceRecording}
-            disabled={isLoading}
-          />
-          <TextInput
-            style={styles.input}
-            value={inputText}
-            onChangeText={setInputText}
-            placeholder="Share what's on your mind..."
-            placeholderTextColor="#9CA3AF"
-            multiline
-            maxLength={1000}
-            editable={!isLoading}
-          />
+          <View style={styles.inputWrapper}>
+            <VoiceButton
+              onRecordingComplete={handleVoiceRecording}
+              disabled={isLoading}
+            />
+            <TextInput
+              style={styles.input}
+              value={inputText}
+              onChangeText={setInputText}
+              placeholder="Share what's on your mind..."
+              placeholderTextColor="#9CA3AF"
+              multiline
+              maxLength={1000}
+              editable={!isLoading}
+            />
+          </View>
           <TouchableOpacity
             style={[styles.sendButton, (!inputText.trim() || isLoading) && styles.sendButtonDisabled]}
             onPress={handleSend}
@@ -473,15 +490,24 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderTopWidth: 1,
     borderTopColor: '#E5E7EB',
-    gap: 12,
+    gap: 10,
+  },
+  inputWrapper: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F5F8F3',
+    borderRadius: 28,
+    paddingLeft: 8,
+    paddingRight: 16,
+    gap: 10,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
   },
   input: {
     flex: 1,
     minHeight: 44,
     maxHeight: 120,
-    backgroundColor: '#F5F8F3',
-    borderRadius: 22,
-    paddingHorizontal: 16,
     paddingVertical: 12,
     fontSize: 16,
     color: '#2D3E1F',

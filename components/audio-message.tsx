@@ -17,6 +17,7 @@ export function AudioMessage({ audioBase64, transcript, duration, isUser }: Audi
   const [playbackDuration, setPlaybackDuration] = useState(duration || 0);
 
   useEffect(() => {
+    setupAudio();
     return () => {
       if (sound) {
         sound.unloadAsync();
@@ -24,8 +25,28 @@ export function AudioMessage({ audioBase64, transcript, duration, isUser }: Audi
     };
   }, [sound]);
 
+  const setupAudio = async () => {
+    try {
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: false,
+        playsInSilentModeIOS: true,
+        staysActiveInBackground: false,
+        shouldDuckAndroid: true,
+      });
+    } catch (error) {
+      console.error('Error setting up audio in AudioMessage:', error);
+    }
+  };
+
   const handlePlayPause = async () => {
     try {
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: false,
+        playsInSilentModeIOS: true,
+        staysActiveInBackground: false,
+        shouldDuckAndroid: true,
+      });
+
       if (sound) {
         if (isPlaying) {
           await sound.pauseAsync();
@@ -36,6 +57,7 @@ export function AudioMessage({ audioBase64, transcript, duration, isUser }: Audi
         }
       } else {
         const audioUri = `data:audio/mp3;base64,${audioBase64}`;
+        console.log('Creating audio from base64, length:', audioBase64.length);
         const { sound: newSound } = await Audio.Sound.createAsync(
           { uri: audioUri },
           { shouldPlay: true },
@@ -43,6 +65,7 @@ export function AudioMessage({ audioBase64, transcript, duration, isUser }: Audi
         );
         setSound(newSound);
         setIsPlaying(true);
+        console.log('Audio playback started');
       }
     } catch (error) {
       console.error('Error playing audio:', error);

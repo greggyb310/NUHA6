@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { MapPin, MessageCircle, Leaf, Navigation, Heart } from 'lucide-react-native';
+import { MapPin, MessageCircle, Leaf, Heart } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import MapScreen from '@/components/map-screen';
 
@@ -9,9 +9,9 @@ const { height } = Dimensions.get('window');
 
 export default function HomeScreen() {
   const router = useRouter();
-  const [showMap, setShowMap] = useState(false);
+  const [currentView, setCurrentView] = useState<'welcome' | 'map'>('welcome');
 
-  if (showMap) {
+  if (currentView === 'map') {
     return <MapScreen />;
   }
 
@@ -48,7 +48,7 @@ export default function HomeScreen() {
 
           <TouchableOpacity
             style={styles.featureCard}
-            onPress={() => setShowMap(true)}
+            onPress={() => setCurrentView('map')}
           >
             <View style={styles.featureIcon}>
               <MapPin size={28} color="#4A7C2E" />
@@ -57,21 +57,6 @@ export default function HomeScreen() {
               <Text style={styles.featureTitle}>Explore Nature Spots</Text>
               <Text style={styles.featureDescription}>
                 Discover parks, trails, and outdoor spaces near you
-              </Text>
-            </View>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.featureCard}
-            onPress={() => router.push('/(tabs)/chat')}
-          >
-            <View style={styles.featureIcon}>
-              <Navigation size={28} color="#4A7C2E" />
-            </View>
-            <View style={styles.featureContent}>
-              <Text style={styles.featureTitle}>Guided Excursions</Text>
-              <Text style={styles.featureDescription}>
-                AI-generated custom routes for your wellness journey
               </Text>
             </View>
           </TouchableOpacity>
