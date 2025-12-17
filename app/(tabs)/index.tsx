@@ -75,8 +75,8 @@ export default function HomeScreen() {
               resizeMode="contain"
             />
           </View>
-          <Text style={styles.welcomeText}>Reconnecting with Awe</Text>
           <Text style={styles.heroTitle}>NatureUp Health</Text>
+          <Text style={styles.welcomeText}>Reconnecting with Awe</Text>
           <Text style={styles.heroSubtitle}>
             Your voice-first companion for personalized nature therapy and outdoor wellness
           </Text>
@@ -145,18 +145,18 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
-  welcomeText: {
-    fontSize: 28,
-    fontWeight: '600',
-    color: '#4A7C2E',
-    marginBottom: 24,
-  },
   heroTitle: {
     fontSize: 20,
     fontWeight: '700',
     color: '#2D3E1F',
-    marginBottom: 6,
+    marginBottom: 16,
     textAlign: 'center',
+  },
+  welcomeText: {
+    fontSize: 28,
+    fontWeight: '600',
+    color: '#4A7C2E',
+    marginBottom: 16,
   },
   heroSubtitle: {
     fontSize: 16,
