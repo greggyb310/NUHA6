@@ -1,15 +1,53 @@
-import { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Image } from 'react-native';
+import { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Image, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MapPin, MessageCircle } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
+import * as Location from 'expo-location';
 import MapScreen from '@/components/map-screen';
+import WeatherCard from '@/components/weather-card';
+import { getCurrentWeather, WeatherData } from '@/services/weather';
 
 const { height } = Dimensions.get('window');
 
 export default function HomeScreen() {
   const router = useRouter();
   const [currentView, setCurrentView] = useState<'welcome' | 'map'>('welcome');
+  const [weather, setWeather] = useState<WeatherData | null>(null);
+  const [weatherLoading, setWeatherLoading] = useState(false);
+
+  useEffect(() => {
+    fetchWeather();
+  }, []);
+
+  const fetchWeather = async () => {
+    if (Platform.OS === 'web') {
+      return;
+    }
+
+    try {
+      setWeatherLoading(true);
+      const { status } = await Location.requestForegroundPermissionsAsync();
+
+      if (status !== 'granted') {
+        console.log('Location permission denied');
+        setWeatherLoading(false);
+        return;
+      }
+
+      const location = await Location.getCurrentPositionAsync({});
+      const weatherData = await getCurrentWeather(
+        location.coords.latitude,
+        location.coords.longitude
+      );
+
+      setWeather(weatherData);
+    } catch (error) {
+      console.error('Error fetching weather:', error);
+    } finally {
+      setWeatherLoading(false);
+    }
+  };
 
   if (currentView === 'map') {
     return <MapScreen />;
@@ -32,6 +70,8 @@ export default function HomeScreen() {
             Your voice-first companion for personalized nature therapy and outdoor wellness
           </Text>
         </View>
+
+        <WeatherCard weather={weather} loading={weatherLoading} />
 
         <View style={styles.featuresSection}>
           <TouchableOpacity
