@@ -6,7 +6,7 @@ import { getCurrentUser } from '@/services/auth';
 import { updateUserProfile } from '@/services/user-profile';
 
 const FITNESS_LEVELS = ['Beginner', 'Intermediate', 'Advanced'];
-const MOBILITY_LEVELS = ['Limited', 'Moderate', 'Full'];
+const MOBILITY_LEVELS = ['Wheelchair', 'Limited', 'Moderate', 'Full'];
 
 const ACTIVITY_PREFERENCES = [
   'Walking',
