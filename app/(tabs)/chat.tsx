@@ -133,6 +133,7 @@ export default function CreateScreen() {
     setError(null);
 
     try {
+      console.log('Starting excursion creation...');
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         setError('Please sign in to create an excursion.');
@@ -140,6 +141,7 @@ export default function CreateScreen() {
         return;
       }
 
+      console.log('User authenticated, calling AI...');
       const preferences = {
         activities: selectedActivities,
         energyLevel,
@@ -158,14 +160,20 @@ export default function CreateScreen() {
         preferences,
       });
 
+      console.log('AI result:', result);
+
       if (!result.ok || !result.result) {
-        setError(result.error?.message || 'Failed to create excursion. Please try again.');
+        const errorMsg = result.error?.message || 'Failed to create excursion. Please try again.';
+        console.error('AI error:', errorMsg);
+        setError(errorMsg);
         setLoading(false);
         return;
       }
 
       const excursionData = result.result;
+      console.log('Excursion data:', excursionData);
 
+      console.log('Saving to database...');
       const { data: insertedData, error: dbError } = await supabase
         .from('excursions')
         .insert({
@@ -187,25 +195,29 @@ export default function CreateScreen() {
         .single();
 
       if (dbError || !insertedData) {
-        console.error('Error saving excursion:', dbError);
+        console.error('Database error:', dbError);
         setError('Created excursion but failed to save. Please try again.');
         setLoading(false);
         return;
       }
 
+      console.log('Excursion saved with ID:', insertedData.id);
       setLoading(false);
 
-      router.push({
-        pathname: '/excursion-detail',
-        params: {
-          id: insertedData.id,
-          userLat: location.coords.latitude.toString(),
-          userLng: location.coords.longitude.toString(),
-        },
-      });
+      console.log('Navigating to detail page...');
+      setTimeout(() => {
+        router.push({
+          pathname: '/excursion-detail',
+          params: {
+            id: insertedData.id,
+            userLat: location.coords.latitude.toString(),
+            userLng: location.coords.longitude.toString(),
+          },
+        });
+      }, 100);
     } catch (err) {
       console.error('Error creating excursion:', err);
-      setError('An unexpected error occurred. Please try again.');
+      setError(`An unexpected error occurred: ${err instanceof Error ? err.message : 'Unknown error'}`);
       setLoading(false);
     }
   };

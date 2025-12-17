@@ -31,10 +31,29 @@ export default function RootLayout() {
     const inAuthGroup = segments[0] === '(tabs)';
     const inOnboarding = segments[0] === 'onboarding';
     const inExcursionDetail = segments[0] === 'excursion-detail';
+    const inSignIn = segments[0] === 'sign-in';
+    const inSignUp = segments[0] === 'sign-up';
+
+    console.log('Navigation check:', {
+      isAuthenticated,
+      segments,
+      inAuthGroup,
+      inExcursionDetail,
+    });
 
     if (!isAuthenticated && inAuthGroup) {
+      console.log('Redirecting to sign-in (unauthenticated in tabs)');
       router.replace('/sign-in');
-    } else if (isAuthenticated && !inAuthGroup && !inOnboarding && !inExcursionDetail) {
+    } else if (
+      isAuthenticated &&
+      !inAuthGroup &&
+      !inOnboarding &&
+      !inExcursionDetail &&
+      !inSignIn &&
+      !inSignUp &&
+      segments.length > 0
+    ) {
+      console.log('Redirecting to tabs (authenticated but not in allowed route)');
       router.replace('/(tabs)');
     }
   }, [isAuthenticated, segments]);
