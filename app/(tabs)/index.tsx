@@ -162,6 +162,7 @@ const styles = StyleSheet.create({
     color: '#4A7C2E',
     textAlign: 'center',
     marginHorizontal: 24,
+    marginTop: 32,
     marginBottom: 8,
   },
   loadingContainer: {
