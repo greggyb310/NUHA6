@@ -92,10 +92,9 @@ async function audioUriToBase64(uri: string): Promise<string> {
       reader.readAsDataURL(blob);
     });
   } else {
-    const FileSystem = await import('expo-file-system');
-    const base64 = await FileSystem.readAsStringAsync(uri, {
-      encoding: 'base64',
-    });
+    const { File } = await import('expo-file-system/next');
+    const file = new File(uri);
+    const base64 = await file.base64();
     return base64;
   }
 }
