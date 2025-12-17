@@ -1,18 +1,14 @@
 import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Image, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MapPin, MessageCircle } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import * as Location from 'expo-location';
-import MapScreen from '@/components/map-screen';
 import WeatherCard from '@/components/weather-card';
 import { getCurrentWeather, WeatherData } from '@/services/weather';
 
-const { height } = Dimensions.get('window');
-
 export default function HomeScreen() {
   const router = useRouter();
-  const [currentView, setCurrentView] = useState<'welcome' | 'map'>('welcome');
   const [weather, setWeather] = useState<WeatherData | null>(null);
   const [weatherLoading, setWeatherLoading] = useState(false);
 
@@ -48,10 +44,6 @@ export default function HomeScreen() {
       setWeatherLoading(false);
     }
   };
-
-  if (currentView === 'map') {
-    return <MapScreen />;
-  }
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -91,7 +83,7 @@ export default function HomeScreen() {
 
           <TouchableOpacity
             style={styles.featureCard}
-            onPress={() => setCurrentView('map')}
+            onPress={() => router.push('/(tabs)/explore')}
           >
             <View style={styles.featureIcon}>
               <MapPin size={28} color="#4A7C2E" />

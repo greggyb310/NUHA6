@@ -1,5 +1,5 @@
-import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
-import { Cloud } from 'lucide-react-native';
+import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity, Linking } from 'react-native';
+import { Cloud, ChevronRight } from 'lucide-react-native';
 import { WeatherData } from '@/services/weather';
 
 interface WeatherCardProps {
@@ -8,6 +8,12 @@ interface WeatherCardProps {
 }
 
 export default function WeatherCard({ weather, loading }: WeatherCardProps) {
+  const handleForecastPress = () => {
+    if (weather) {
+      Linking.openURL('https://www.weather.gov/');
+    }
+  };
+
   if (loading) {
     return (
       <View style={styles.container}>
@@ -36,20 +42,14 @@ export default function WeatherCard({ weather, loading }: WeatherCardProps) {
         </View>
       </View>
 
-      <View style={styles.details}>
-        <View style={styles.detailItem}>
-          <Text style={styles.detailLabel}>Feels like</Text>
-          <Text style={styles.detailValue}>{weather.feelsLike}°F</Text>
-        </View>
-        <View style={styles.detailItem}>
-          <Text style={styles.detailLabel}>Humidity</Text>
-          <Text style={styles.detailValue}>{weather.humidity}%</Text>
-        </View>
-        <View style={styles.detailItem}>
-          <Text style={styles.detailLabel}>Wind</Text>
-          <Text style={styles.detailValue}>{weather.windSpeed} mph</Text>
-        </View>
-      </View>
+      <TouchableOpacity
+        style={styles.forecastLink}
+        onPress={handleForecastPress}
+        activeOpacity={0.7}
+      >
+        <Text style={styles.forecastText}>View hourly forecast</Text>
+        <ChevronRight size={16} color="#4A7C2E" />
+      </TouchableOpacity>
     </View>
   );
 }
@@ -101,25 +101,19 @@ const styles = StyleSheet.create({
     color: '#5A6C4A',
     textTransform: 'capitalize',
   },
-  details: {
+  forecastLink: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    alignItems: 'center',
+    justifyContent: 'center',
     paddingTop: 16,
     borderTopWidth: 1,
     borderTopColor: 'rgba(74, 124, 46, 0.1)',
   },
-  detailItem: {
-    alignItems: 'center',
-  },
-  detailLabel: {
-    fontSize: 12,
-    color: '#5A6C4A',
-    marginBottom: 4,
-  },
-  detailValue: {
+  forecastText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#2D3E1F',
+    color: '#4A7C2E',
+    marginRight: 4,
   },
   loadingText: {
     fontSize: 14,
