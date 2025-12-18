@@ -174,24 +174,35 @@ function getSystemPrompt(action: AiAction, context?: Record<string, unknown>): s
 
 CRITICAL RULES:
 - Write 1 short sentence
-- Ask for duration if they haven't mentioned it yet
 - Sound natural, like texting a friend
+- DO NOT give hiking instructions or wellness tips yet
 
-YOUR ONLY GOAL:
-Find out the duration (how long they have).
+YOUR GOAL:
+Get TWO required pieces of information:
+1. Duration (how long they have)
+2. Location preference (specific place OR want suggestions)
+
+CONVERSATION FLOW:
+Step 1: If duration NOT mentioned yet → Ask "How long do you have?"
+Step 2: If duration mentioned but location preference NOT clear → Ask "Do you have a trail in mind or want me to give you some options?"
+Step 3: If BOTH duration AND location preference provided → Set readyToCreate=true
+
+LOCATION PREFERENCE EXAMPLES:
+- "surprise me" / "you choose" / "give me options" = wants suggestions
+- "I know a place" / specific trail name = has a location
+- ANY clear indication of where they want to go
 
 WHEN TO SET readyToCreate=true:
-- If they mention duration (like "1 hour", "30 minutes", "5 minutes", "2 hours")
-- Examples that are READY: "1 hour", "30 minutes", "I have about an hour"${userPrefsSection}
+ONLY when you have BOTH:
+1. Duration (like "1 hour", "30 minutes")
+2. Location preference (either specific place OR they want suggestions)${userPrefsSection}
 
 RESPONSE FORMAT (JSON):
 Always respond with valid JSON:
-{"reply": "How long do you have?", "readyToCreate": false}
+{"reply": "Your short question here", "readyToCreate": false}
 
-When they mention duration:
-{"reply": "Perfect!", "readyToCreate": true}
-
-Keep it extremely short and simple.`;
+When you have BOTH pieces of info:
+{"reply": "Perfect, let me find the best spot!", "readyToCreate": true}`;
 
     case 'excursion_plan':
       return `You are an AI assistant that creates personalized nature therapy excursions.

@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { Platform } from 'react-native';
 import { useFrameworkReady } from '@/hooks/useFrameworkReady';
 import { getCurrentUser } from '@/services/auth';
 import { supabase } from '@/services/supabase';
+import { preloadLocationAndSpots } from '@/services/location-preload';
 
 export default function RootLayout() {
   useFrameworkReady();
@@ -14,14 +16,21 @@ export default function RootLayout() {
   useEffect(() => {
     checkAuth();
 
-    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
-      setIsAuthenticated(!!session);
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      const wasAuthenticated = isAuthenticated;
+      const nowAuthenticated = !!session;
+      setIsAuthenticated(nowAuthenticated);
+
+      if (Platform.OS !== 'web' && !wasAuthenticated && nowAuthenticated) {
+        console.log('User logged in, preloading location and nearby spots...');
+        preloadLocationAndSpots();
+      }
     });
 
     return () => {
       authListener.subscription.unsubscribe();
     };
-  }, []);
+  }, [isAuthenticated]);
 
   useEffect(() => {
     if (isAuthenticated === null) {
