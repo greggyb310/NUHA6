@@ -34,6 +34,7 @@ export default function ExcursionDetailScreen() {
   const [error, setError] = useState<string | null>(null);
   const [stepsExpanded, setStepsExpanded] = useState(false);
   const [contentReady, setContentReady] = useState(false);
+  const [routeMode, setRouteMode] = useState<'foot' | 'driving'>('foot');
 
   useEffect(() => {
     loadExcursion();
@@ -179,7 +180,26 @@ export default function ExcursionDetailScreen() {
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         {excursionLocation && (
-          <View style={styles.mapCard}>
+          <>
+            <View style={styles.routeModeToggle}>
+              <TouchableOpacity
+                style={[styles.routeModeButton, routeMode === 'foot' && styles.routeModeButtonActive]}
+                onPress={() => setRouteMode('foot')}
+              >
+                <Text style={[styles.routeModeButtonText, routeMode === 'foot' && styles.routeModeButtonTextActive]}>
+                  Walking
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.routeModeButton, routeMode === 'driving' && styles.routeModeButtonActive]}
+                onPress={() => setRouteMode('driving')}
+              >
+                <Text style={[styles.routeModeButtonText, routeMode === 'driving' && styles.routeModeButtonTextActive]}>
+                  Driving
+                </Text>
+              </TouchableOpacity>
+            </View>
+            <View style={styles.mapCard}>
             <MapScreen
               initialRegion={{
                 latitude: excursionLocation.lat,
@@ -194,8 +214,10 @@ export default function ExcursionDetailScreen() {
                 title: destination?.name || excursion.title,
               } : undefined}
               routeWaypoints={waypoints}
+              routeMode={routeMode}
             />
           </View>
+          </>
         )}
 
         <View style={styles.metricsCard}>
@@ -514,5 +536,33 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: '#4A7C2E',
+  },
+  routeModeToggle: {
+    flexDirection: 'row',
+    gap: 12,
+    marginHorizontal: 20,
+    marginBottom: 16,
+  },
+  routeModeButton: {
+    flex: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    backgroundColor: '#F5F8F3',
+    borderWidth: 2,
+    borderColor: '#E5E7EB',
+    alignItems: 'center',
+  },
+  routeModeButtonActive: {
+    backgroundColor: '#4A7C2E',
+    borderColor: '#4A7C2E',
+  },
+  routeModeButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#5A6C4A',
+  },
+  routeModeButtonTextActive: {
+    color: '#FFFFFF',
   },
 });

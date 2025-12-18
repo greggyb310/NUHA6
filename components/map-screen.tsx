@@ -30,13 +30,15 @@ interface MapScreenProps {
     title?: string;
   };
   routeWaypoints?: Array<{ lat: number; lng: number }>;
+  routeMode?: 'foot' | 'driving';
 }
 
 export default function MapScreen({
   initialRegion,
   showNearbyPlaces = true,
   destination,
-  routeWaypoints
+  routeWaypoints,
+  routeMode = 'foot'
 }: MapScreenProps) {
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
   const [places, setPlaces] = useState<NaturePlace[]>([]);
@@ -46,6 +48,8 @@ export default function MapScreen({
   const [mapType, setMapType] = useState<MapType>('standard');
   const [showTraffic, setShowTraffic] = useState(false);
   const [showLayerMenu, setShowLayerMenu] = useState(false);
+  const [detailedRoute, setDetailedRoute] = useState<Array<{ latitude: number; longitude: number }>>([]);
+  const [routeLoading, setRouteLoading] = useState(false);
   const mapRef = useRef<MapView | null>(null);
 
   useEffect(() => {
@@ -131,6 +135,51 @@ export default function MapScreen({
   };
 
   useEffect(() => {
+    const fetchDetailedRoute = async () => {
+      if (!routeWaypoints || routeWaypoints.length < 2) {
+        setDetailedRoute([]);
+        return;
+      }
+
+      setRouteLoading(true);
+
+      try {
+        const response = await fetch(
+          `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/calculate-route`,
+          {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              waypoints: routeWaypoints,
+              mode: routeMode,
+            }),
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error('Failed to calculate route');
+        }
+
+        const data = await response.json();
+        setDetailedRoute(data.coordinates || []);
+      } catch (err) {
+        console.error('Error calculating route:', err);
+        setDetailedRoute(routeWaypoints.map(wp => ({
+          latitude: wp.lat,
+          longitude: wp.lng,
+        })));
+      } finally {
+        setRouteLoading(false);
+      }
+    };
+
+    fetchDetailedRoute();
+  }, [routeWaypoints, routeMode]);
+
+  useEffect(() => {
     if (loading) return;
     if (!mapRef.current) return;
 
@@ -143,13 +192,8 @@ export default function MapScreen({
       });
     }
 
-    if (routeWaypoints && routeWaypoints.length > 0) {
-      coords.push(
-        ...routeWaypoints.map(wp => ({
-          latitude: wp.lat,
-          longitude: wp.lng,
-        }))
-      );
+    if (detailedRoute.length > 0) {
+      coords.push(...detailedRoute);
     }
 
     if (destination?.latitude && destination?.longitude) {
@@ -169,7 +213,7 @@ export default function MapScreen({
     } catch {
       // no-op
     }
-  }, [loading, location, routeWaypoints, destination]);
+  }, [loading, location, detailedRoute, destination]);
 
   if (loading) {
     return (
@@ -250,12 +294,9 @@ export default function MapScreen({
           />
         ))}
 
-        {routeWaypoints && routeWaypoints.length > 0 && (
+        {detailedRoute.length > 0 && (
           <Polyline
-            coordinates={routeWaypoints.map(wp => ({
-              latitude: wp.lat,
-              longitude: wp.lng,
-            }))}
+            coordinates={detailedRoute}
             strokeColor="#4A7C2E"
             strokeWidth={3}
           />
