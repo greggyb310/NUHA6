@@ -33,6 +33,7 @@ export default function ExcursionDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [stepsExpanded, setStepsExpanded] = useState(false);
+  const [checklistExpanded, setChecklistExpanded] = useState(false);
   const [contentReady, setContentReady] = useState(false);
   const [travelDuration, setTravelDuration] = useState<number | null>(null);
 
@@ -183,6 +184,17 @@ export default function ExcursionDetailScreen() {
   const steps = excursion.route_data?.steps || [];
   const previewSteps = stepsExpanded ? steps : steps.slice(0, 3);
 
+  const departureChecklist = [
+    'Water bottle',
+    'Comfortable walking shoes',
+    'Weather-appropriate clothing',
+    'Fully charged phone',
+    'Sunscreen (if sunny)',
+    'Hat or sunglasses',
+    'Small snack',
+    'First aid basics',
+  ];
+
   const openDirections = async () => {
     const targetLocation = destinationPoint || excursionLocation;
     if (!targetLocation) {
@@ -294,37 +306,55 @@ export default function ExcursionDetailScreen() {
 
         {steps.length > 0 && (
           <View style={styles.stepsCard}>
-            <View style={styles.cardHeader}>
+            <TouchableOpacity
+              style={styles.collapsibleHeader}
+              onPress={() => setStepsExpanded(!stepsExpanded)}
+              activeOpacity={0.7}
+            >
               <Text style={styles.cardTitle}>
                 Activities ({steps.length})
               </Text>
-            </View>
-            {previewSteps.map((step, index) => (
-              <View key={index} style={styles.stepItem}>
-                <View style={styles.stepNumber}>
-                  <Text style={styles.stepNumberText}>{index + 1}</Text>
-                </View>
-                <Text style={styles.stepText} numberOfLines={stepsExpanded ? undefined : 2}>
-                  {step}
-                </Text>
-              </View>
-            ))}
-            {steps.length > 3 && (
-              <TouchableOpacity
-                style={styles.expandButton}
-                onPress={() => setStepsExpanded(!stepsExpanded)}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.expandButtonText}>
-                  {stepsExpanded
-                    ? 'Show less'
-                    : `Show ${steps.length - 3} more activities`
-                  }
-                </Text>
-              </TouchableOpacity>
+              <Text style={styles.expandArrow}>{stepsExpanded ? '▲' : '▼'}</Text>
+            </TouchableOpacity>
+            {stepsExpanded && (
+              <>
+                {steps.map((step, index) => (
+                  <View key={index} style={styles.stepItem}>
+                    <View style={styles.stepNumber}>
+                      <Text style={styles.stepNumberText}>{index + 1}</Text>
+                    </View>
+                    <Text style={styles.stepText}>
+                      {step}
+                    </Text>
+                  </View>
+                ))}
+              </>
             )}
           </View>
         )}
+
+        <View style={styles.stepsCard}>
+          <TouchableOpacity
+            style={styles.collapsibleHeader}
+            onPress={() => setChecklistExpanded(!checklistExpanded)}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.cardTitle}>
+              Departure Checklist ({departureChecklist.length})
+            </Text>
+            <Text style={styles.expandArrow}>{checklistExpanded ? '▲' : '▼'}</Text>
+          </TouchableOpacity>
+          {checklistExpanded && (
+            <>
+              {departureChecklist.map((item, index) => (
+                <View key={index} style={styles.checklistItem}>
+                  <View style={styles.checklistBullet} />
+                  <Text style={styles.checklistText}>{item}</Text>
+                </View>
+              ))}
+            </>
+          )}
+        </View>
 
         <TouchableOpacity
           style={styles.directionsButton}
@@ -332,6 +362,19 @@ export default function ExcursionDetailScreen() {
         >
           <NavigationIcon size={20} color="#FFFFFF" />
           <Text style={styles.directionsButtonText}>Get Directions</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.startButton}
+          onPress={() => router.push({
+            pathname: '/(tabs)/explore/active-excursion',
+            params: {
+              id: excursion.id,
+              title: cleanTitle(excursion.title),
+            },
+          })}
+        >
+          <Text style={styles.startButtonText}>Start Excursion</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -498,6 +541,52 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#4A7C2E',
+  },
+  collapsibleHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingBottom: 12,
+  },
+  expandArrow: {
+    fontSize: 14,
+    color: '#5A6C4A',
+    fontWeight: '600',
+  },
+  checklistItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+    gap: 12,
+  },
+  checklistBullet: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#4A7C2E',
+  },
+  checklistText: {
+    flex: 1,
+    fontSize: 14,
+    color: '#5A6C4A',
+  },
+  startButton: {
+    backgroundColor: '#7FA957',
+    marginHorizontal: 20,
+    marginTop: 12,
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  startButtonText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
   stepsCard: {
     backgroundColor: '#FFFFFF',

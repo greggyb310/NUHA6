@@ -37,4 +37,9 @@ export type ExcursionPlanResult = {
   duration_minutes?: number;
   distance_km?: number;
   difficulty?: 'easy' | 'moderate' | 'challenging';
+  destination?: {
+    name: string;
+    lat: number;
+    lng: number;
+  };
 };

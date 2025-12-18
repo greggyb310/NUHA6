@@ -24,6 +24,7 @@ type MapType = 'standard' | 'satellite' | 'hybrid';
 interface MapScreenProps {
   initialRegion?: Region;
   showNearbyPlaces?: boolean;
+  showUserLocation?: boolean;
   destination?: {
     latitude: number;
     longitude: number;
@@ -36,6 +37,7 @@ interface MapScreenProps {
 export default function MapScreen({
   initialRegion,
   showNearbyPlaces = true,
+  showUserLocation = false,
   destination,
   routeWaypoints,
   routeMode = 'foot'
@@ -265,8 +267,8 @@ export default function MapScreen({
         showsPointsOfInterest={false}
         showsBuildings={false}
         initialRegion={mapRegion}
-        showsUserLocation={!!location}
-        showsMyLocationButton={!!location}
+        showsUserLocation={showUserLocation || !!location}
+        showsMyLocationButton={showUserLocation || !!location}
       >
         {showNearbyPlaces && location && (
           <Circle
