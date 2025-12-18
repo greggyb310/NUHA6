@@ -15,25 +15,42 @@ const NATURE_IMAGES = [
 
 const { width, height } = Dimensions.get('window');
 
-export function SplashScreen() {
+interface SplashScreenProps {
+  onComplete?: () => void;
+}
+
+export function SplashScreen({ onComplete }: SplashScreenProps) {
   const [randomImage] = useState(() => {
     const randomIndex = Math.floor(Math.random() * NATURE_IMAGES.length);
     return NATURE_IMAGES[randomIndex];
   });
 
-  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const fadeInAnim = useRef(new Animated.Value(0)).current;
+  const fadeOutAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
-    Animated.timing(fadeAnim, {
-      toValue: 1,
-      duration: 1000,
-      delay: 300,
-      useNativeDriver: true,
-    }).start();
-  }, [fadeAnim]);
+    Animated.sequence([
+      Animated.timing(fadeInAnim, {
+        toValue: 1,
+        duration: 1000,
+        delay: 300,
+        useNativeDriver: true,
+      }),
+      Animated.delay(3700),
+      Animated.timing(fadeOutAnim, {
+        toValue: 0,
+        duration: 800,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      if (onComplete) {
+        onComplete();
+      }
+    });
+  }, [fadeInAnim, fadeOutAnim, onComplete]);
 
   return (
-    <View style={styles.container}>
+    <Animated.View style={[styles.container, { opacity: fadeOutAnim }]}>
       <ImageBackground
         source={randomImage}
         style={styles.backgroundImage}
@@ -41,13 +58,13 @@ export function SplashScreen() {
       >
         <View style={styles.overlay} />
         <Animated.View
-          style={[styles.content, { opacity: fadeAnim }]}
+          style={[styles.content, { opacity: fadeInAnim }]}
         >
           <Text style={styles.welcomeText}>Welcome</Text>
           <Text style={styles.subtitle}>to NatureUP Health</Text>
         </Animated.View>
       </ImageBackground>
-    </View>
+    </Animated.View>
   );
 }
 

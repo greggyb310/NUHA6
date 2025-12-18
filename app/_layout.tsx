@@ -11,6 +11,7 @@ export default function RootLayout() {
   const router = useRouter();
   const segments = useSegments();
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+  const [showSplash, setShowSplash] = useState(true);
 
   useEffect(() => {
     checkAuth();
@@ -25,7 +26,7 @@ export default function RootLayout() {
   }, []);
 
   useEffect(() => {
-    if (isAuthenticated === null) {
+    if (isAuthenticated === null || showSplash) {
       return;
     }
 
@@ -54,15 +55,19 @@ export default function RootLayout() {
       console.log('Redirecting to tabs (authenticated but not in allowed route)');
       router.replace('/(tabs)');
     }
-  }, [isAuthenticated, segments]);
+  }, [isAuthenticated, segments, showSplash]);
 
   const checkAuth = async () => {
     const user = await getCurrentUser();
     setIsAuthenticated(!!user);
   };
 
-  if (isAuthenticated === null) {
-    return <SplashScreen />;
+  const handleSplashComplete = () => {
+    setShowSplash(false);
+  };
+
+  if (isAuthenticated === null || showSplash) {
+    return <SplashScreen onComplete={handleSplashComplete} />;
   }
 
   return (
