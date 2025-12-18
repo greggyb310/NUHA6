@@ -5,6 +5,7 @@ import { useRouter } from 'expo-router';
 import { supabase } from '@/services/supabase';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MessageCircle, Send } from 'lucide-react-native';
+import { parseIntent } from '@/services/intent-parser';
 
 const IMAGE_MAP: Record<string, ImageSourcePropType> = {
   'img_1335_medium.jpeg': require('@/assets/images/img_1335_medium.jpeg'),
@@ -82,7 +83,14 @@ export default function HomeScreen() {
 
   const handleSendMessage = () => {
     if (message.trim()) {
-      router.push('/chat');
+      const parsedIntent = parseIntent(message.trim());
+      console.log('Home screen - Parsed intent:', parsedIntent);
+      const intentData = JSON.stringify(parsedIntent);
+      console.log('Home screen - Navigating with intentData:', intentData);
+      router.push({
+        pathname: '/(tabs)/chat',
+        params: { intentData },
+      });
     }
   };
 

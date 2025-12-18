@@ -88,16 +88,20 @@ export default function CreateScreen() {
   const scrollViewRef = useRef<ScrollView>(null);
 
   useEffect(() => {
+    console.log('Received params:', params);
     if (params.intentData) {
       try {
         const intent = JSON.parse(params.intentData as string) as ParsedIntent;
+        console.log('Applying intent to form:', intent);
         setParsedIntent(intent);
 
         if (intent.durationMinutes) {
+          console.log('Setting duration to:', intent.durationMinutes);
           setDuration(intent.durationMinutes);
         }
 
         if (intent.activities && intent.activities.length > 0) {
+          console.log('Setting activities to:', intent.activities);
           setSelectedActivities(intent.activities);
         }
 
@@ -116,11 +120,14 @@ export default function CreateScreen() {
             };
             return goalMap[titleCase] || titleCase;
           });
+          console.log('Setting therapeutic goals to:', mappedGoals);
           setSelectedTherapeutic(mappedGoals);
         }
 
         if (intent.difficulty) {
-          setRiskTolerance(intent.difficulty === 'easy' ? 'low' : intent.difficulty === 'hard' ? 'high' : 'medium');
+          const riskLevel = intent.difficulty === 'easy' ? 'low' : intent.difficulty === 'hard' ? 'high' : 'medium';
+          console.log('Setting risk tolerance to:', riskLevel);
+          setRiskTolerance(riskLevel);
         }
       } catch (e) {
         console.error('Failed to parse intent:', e);
@@ -437,6 +444,16 @@ export default function CreateScreen() {
           >
         <MinimalWeather weather={weather} loading={weatherLoading} />
 
+        {parsedIntent && (
+          <View style={styles.intentBanner}>
+            <Text style={styles.intentBannerText}>
+              Using your request: {parsedIntent.durationMinutes && `${parsedIntent.durationMinutes} min`}
+              {parsedIntent.activities && parsedIntent.activities.length > 0 && ` • ${parsedIntent.activities.join(', ')}`}
+              {parsedIntent.proximityBias !== 'none' && ` • ${parsedIntent.matches?.proximity || 'nearby'}`}
+            </Text>
+          </View>
+        )}
+
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Duration</Text>
           <TouchableOpacity
@@ -696,6 +713,21 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingBottom: 120,
+  },
+  intentBanner: {
+    marginHorizontal: 20,
+    marginTop: 16,
+    marginBottom: 8,
+    padding: 12,
+    backgroundColor: '#E8F5E9',
+    borderRadius: 8,
+    borderLeftWidth: 4,
+    borderLeftColor: '#4A7C2E',
+  },
+  intentBannerText: {
+    fontSize: 14,
+    color: '#2D3E1F',
+    fontWeight: '500',
   },
   section: {
     marginTop: 24,

@@ -1,13 +1,37 @@
 # Intent Parsing Test Guide
 
-## Recent Fix (2025-12-18)
-Fixed critical bug where duration and other parsed intent values were not being applied to the Create Excursion form. The issue was that `useLocalSearchParams()` was not being used to read the `intentData` parameter passed from the home screen.
+## Recent Fix (2025-12-18) - Complete Solution
 
-**What was fixed:**
-- Added `useLocalSearchParams()` import and hook
-- Added intent application logic on component mount
-- Prevented user preferences from overwriting intent values
-- All parsed values (duration, activities, goals, difficulty) now pre-fill correctly
+### The Problem
+Duration and other parsed intent values were NOT being applied to the Create Excursion form. User would type "1 hour hike near here" but the form would show default values instead.
+
+### Root Cause
+The home screen was NOT parsing user input or passing intent data to the chat screen. The entire intent parsing flow was missing from navigation.
+
+### Complete Fix Applied
+
+**1. Home Screen (`app/(tabs)/index.tsx`)**
+- ✅ Import `parseIntent` from intent-parser service
+- ✅ Parse user input in `handleSendMessage()` before navigation
+- ✅ Pass `intentData` as JSON string in route params
+- ✅ Changed route to full path: `/(tabs)/chat`
+- ✅ Added console logging for debugging
+
+**2. Chat Screen (`app/(tabs)/chat.tsx`)**
+- ✅ Import and use `useLocalSearchParams()` hook
+- ✅ Read `intentData` parameter and parse JSON
+- ✅ Apply parsed values to form state (duration, activities, goals, risk)
+- ✅ Block user preferences from overwriting intent values
+- ✅ Added green banner showing parsed request
+- ✅ Added console logging for debugging
+
+### Testing in Browser Console
+Open browser DevTools and look for these console messages:
+1. `Home screen - Parsed intent:` shows what was parsed
+2. `Home screen - Navigating with intentData:` shows JSON being passed
+3. `Received params:` shows what chat screen received
+4. `Applying intent to form:` shows the intent object
+5. `Setting duration to:` shows duration value being applied
 
 ## Test Cases
 
