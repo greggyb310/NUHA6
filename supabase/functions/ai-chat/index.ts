@@ -381,6 +381,14 @@ Deno.serve(async (req: Request) => {
   const traceId = crypto.randomUUID();
   const start = Date.now();
 
+  // PERF_TIMERS:EDGE
+  const now = () => Date.now();
+  const marks: Record<string, number> = {};
+  const mark = (k: string) => (marks[k] = now());
+  const since = (k: string) => now() - (marks[k] ?? now());
+
+  mark('start');
+
   if (req.method === 'OPTIONS') {
     return new Response(null, {
       status: 200,
@@ -398,6 +406,7 @@ Deno.serve(async (req: Request) => {
   let body: AiRequest;
   try {
     body = await req.json();
+    mark('after_parse');
   } catch {
     return jsonResponse(
       { ok: false, error: { message: 'Invalid JSON', code: 'INVALID_JSON' }, meta: { trace_id: traceId } },
@@ -413,8 +422,18 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
+    mark('before_ai');
     const provider = getProvider();
     const result = await provider.run(body, traceId);
+    mark('after_ai');
+
+    const perfData = {
+      tag: 'perf',
+      marks,
+      elapsed_ms: since('start'),
+      ai_ms: since('before_ai'),
+    };
+    console.log(JSON.stringify(perfData));
 
     return jsonResponse({
       ok: true,

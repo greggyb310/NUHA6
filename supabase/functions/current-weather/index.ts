@@ -1,4 +1,5 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { createClient } from "jsr:@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -19,6 +20,66 @@ interface WeatherData {
   humidity: number;
   windSpeed: number;
   location: string;
+}
+
+function roundCoordinate(coord: number, decimals = 2): number {
+  return Math.round(coord * Math.pow(10, decimals)) / Math.pow(10, decimals);
+}
+
+function getCacheKey(lat: number, lng: number): string {
+  const roundedLat = roundCoordinate(lat);
+  const roundedLng = roundCoordinate(lng);
+  return `weather:${roundedLat}:${roundedLng}`;
+}
+
+async function getFromCache(cacheKey: string): Promise<WeatherData | null> {
+  try {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    const { data, error } = await supabase
+      .from("api_cache")
+      .select("value, expires_at")
+      .eq("cache_key", cacheKey)
+      .maybeSingle();
+
+    if (error || !data) {
+      return null;
+    }
+
+    const expiresAt = new Date(data.expires_at);
+    if (expiresAt <= new Date()) {
+      return null;
+    }
+
+    console.log("[cache] hit:", cacheKey);
+    return data.value as WeatherData;
+  } catch {
+    return null;
+  }
+}
+
+async function setCache(cacheKey: string, value: WeatherData, ttlMinutes = 15): Promise<void> {
+  try {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    const expiresAt = new Date(Date.now() + ttlMinutes * 60 * 1000);
+
+    await supabase
+      .from("api_cache")
+      .upsert({
+        cache_key: cacheKey,
+        value,
+        expires_at: expiresAt.toISOString(),
+      });
+
+    console.log("[cache] set:", cacheKey, "ttl:", ttlMinutes, "min");
+  } catch (error) {
+    console.error("[cache] set error:", error);
+  }
 }
 
 Deno.serve(async (req: Request) => {
@@ -45,6 +106,25 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    const cacheKey = getCacheKey(latitude, longitude);
+    const cached = await getFromCache(cacheKey);
+
+    if (cached) {
+      return new Response(
+        JSON.stringify(cached),
+        {
+          status: 200,
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json",
+            "X-Cache": "HIT",
+          },
+        }
+      );
+    }
+
+    console.log("[cache] miss:", cacheKey);
+
     const url = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m&temperature_unit=fahrenheit&wind_speed_unit=mph&timezone=auto`;
 
     const response = await fetch(url);
@@ -68,6 +148,8 @@ Deno.serve(async (req: Request) => {
       location: data.timezone || "Current Location",
     };
 
+    await setCache(cacheKey, weatherData, 15);
+
     return new Response(
       JSON.stringify(weatherData),
       {
@@ -75,6 +157,7 @@ Deno.serve(async (req: Request) => {
         headers: {
           ...corsHeaders,
           "Content-Type": "application/json",
+          "X-Cache": "MISS",
         },
       }
     );

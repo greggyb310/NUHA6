@@ -132,7 +132,8 @@ export async function saveMessage(
 export async function sendMessage(
   sessionId: string,
   userMessage: string,
-  conversationHistory: ChatMessage[]
+  conversationHistory: ChatMessage[],
+  onProgress?: (partialReply: string) => void
 ): Promise<{ reply: string; error?: string }> {
   await saveMessage(sessionId, 'user', userMessage);
 

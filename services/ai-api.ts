@@ -27,6 +27,8 @@ export async function aiRun<T = unknown>(payload: AiRequest): Promise<AiResponse
     console.log('AI API: Sending request to', `${SUPABASE_URL}/functions/v1/ai-chat`);
     console.log('AI API: Payload action:', payload.action);
 
+    // PERF_TIMERS:CHAT_CLIENT
+    const t0 = Date.now();
     const response = await fetch(`${SUPABASE_URL}/functions/v1/ai-chat`, {
       method: 'POST',
       headers: {
@@ -35,12 +37,16 @@ export async function aiRun<T = unknown>(payload: AiRequest): Promise<AiResponse
       },
       body: JSON.stringify(payload),
     });
+    const t1 = Date.now();
+    console.log('[chat] network ms:', t1 - t0);
 
     console.log('AI API: Response status:', response.status);
 
     let data;
     try {
       data = await response.json();
+      const t2 = Date.now();
+      console.log('[chat] total to body ms:', t2 - t0);
       console.log('AI API: Response data:', data);
     } catch (parseErr) {
       console.error('AI API: Failed to parse response as JSON');

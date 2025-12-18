@@ -1,4 +1,5 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { createClient } from "jsr:@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -18,6 +19,71 @@ interface Place {
   longitude: number;
   type: string;
   distance: number;
+}
+
+interface PlacesResponse {
+  places: Place[];
+  debug?: any;
+}
+
+function roundCoordinate(coord: number, decimals = 2): number {
+  return Math.round(coord * Math.pow(10, decimals)) / Math.pow(10, decimals);
+}
+
+function getCacheKey(lat: number, lng: number, radius: number): string {
+  const roundedLat = roundCoordinate(lat);
+  const roundedLng = roundCoordinate(lng);
+  return `places:${roundedLat}:${roundedLng}:${Math.round(radius)}`;
+}
+
+async function getFromCache(cacheKey: string): Promise<PlacesResponse | null> {
+  try {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    const { data, error } = await supabase
+      .from("api_cache")
+      .select("value, expires_at")
+      .eq("cache_key", cacheKey)
+      .maybeSingle();
+
+    if (error || !data) {
+      return null;
+    }
+
+    const expiresAt = new Date(data.expires_at);
+    if (expiresAt <= new Date()) {
+      return null;
+    }
+
+    console.log("[cache] hit:", cacheKey);
+    return data.value as PlacesResponse;
+  } catch {
+    return null;
+  }
+}
+
+async function setCache(cacheKey: string, value: PlacesResponse, ttlMinutes = 360): Promise<void> {
+  try {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    const expiresAt = new Date(Date.now() + ttlMinutes * 60 * 1000);
+
+    await supabase
+      .from("api_cache")
+      .upsert({
+        cache_key: cacheKey,
+        value,
+        expires_at: expiresAt.toISOString(),
+      });
+
+    console.log("[cache] set:", cacheKey, "ttl:", ttlMinutes, "min");
+  } catch (error) {
+    console.error("[cache] set error:", error);
+  }
 }
 
 Deno.serve(async (req: Request) => {
@@ -45,6 +111,25 @@ Deno.serve(async (req: Request) => {
     }
 
     const radius = 8046.72;
+    const cacheKey = getCacheKey(latitude, longitude, radius);
+    const cached = await getFromCache(cacheKey);
+
+    if (cached) {
+      return new Response(
+        JSON.stringify(cached),
+        {
+          status: 200,
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json",
+            "X-Cache": "HIT",
+          },
+        }
+      );
+    }
+
+    console.log("[cache] miss:", cacheKey);
+
     const allPlaces: Place[] = [];
     const debugInfo: any = { searches: [], totalResults: 0, source: "openstreetmap" };
 
@@ -118,13 +203,17 @@ Deno.serve(async (req: Request) => {
 
     console.log(`Found ${topThree.length} places using OpenStreetMap for ${latitude},${longitude}`);
 
+    const result = { places: topThree, debug: debugInfo };
+    await setCache(cacheKey, result, 360);
+
     return new Response(
-      JSON.stringify({ places: topThree, debug: debugInfo }),
+      JSON.stringify(result),
       {
         status: 200,
         headers: {
           ...corsHeaders,
           "Content-Type": "application/json",
+          "X-Cache": "MISS",
         },
       }
     );
