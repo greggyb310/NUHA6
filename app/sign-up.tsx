@@ -66,7 +66,7 @@ export default function SignUpScreen() {
       >
         <ScrollView contentContainerStyle={styles.scrollContent}>
           <View style={styles.header}>
-            <Text style={styles.title}>Reconnect with Awe</Text>
+            <Text style={styles.title}>Partnering with Nature</Text>
             <Text style={styles.subtitle}>Create your account to get started</Text>
           </View>
 

@@ -86,7 +86,7 @@ export default function HomeScreen() {
           <Text style={styles.heroTitle}>NatureUp Health</Text>
         </View>
 
-        <Text style={styles.welcomeText}>Reconnect with Awe</Text>
+        <Text style={styles.welcomeText}>Partnering with Nature</Text>
 
         {loading ? (
           <View style={styles.loadingContainer}>
@@ -162,7 +162,7 @@ const styles = StyleSheet.create({
     color: '#4A7C2E',
     textAlign: 'center',
     marginHorizontal: 24,
-    marginTop: 16,
+    marginTop: 4,
     marginBottom: 8,
   },
   loadingContainer: {
