@@ -29,9 +29,15 @@ interface Message {
   content: string;
 }
 
-const FIRST_TIME_GREETING = "Hi! I'm your nature wellness guide. I can help you plan a personalized outdoor experience based on how you're feeling today. What kind of nature experience are you looking for? You can tell me things like how much time you have, what activities interest you, or what you'd like to get out of your time outdoors.\n\nOr tap the Create icon below to build your excursion with more options.";
+const getFirstTimeGreeting = (name?: string) => {
+  const greeting = name ? `Hi ${name}!` : "Hi!";
+  return `${greeting} I'm your nature wellness guide. I can help you plan a personalized outdoor experience based on how you're feeling today. What kind of nature experience are you looking for? You can tell me things like how much time you have, what activities interest you, or what you'd like to get out of your time outdoors.\n\nOr tap the Create icon below to build your excursion with more options.`;
+};
 
-const RETURNING_GREETING = "Let me know how long you have and anything else that I should know when we plan your excursion.";
+const getReturningGreeting = (name?: string) => {
+  const greeting = name ? `Hi ${name}!` : "Hi!";
+  return `${greeting} What would you like to do today? Let me know how long you have and anything else that I should know when we plan your excursion.`;
+};
 
 const CREATE_TAB_HINT = "\n\nOr tap the Create icon below to build your excursion with more options.";
 
@@ -59,23 +65,24 @@ export default function ChatScreen() {
       }
 
       const { data: { user } } = await supabase.auth.getUser();
-      let greeting = FIRST_TIME_GREETING;
+      let greeting = getFirstTimeGreeting();
 
       if (user) {
         const { data: profile } = await supabase
           .from('user_profiles')
-          .select('chat_session_count')
+          .select('chat_session_count, full_name')
           .eq('user_id', user.id)
           .maybeSingle();
 
         const currentCount = profile?.chat_session_count || 0;
+        const userName = profile?.full_name;
 
         if (currentCount === 0) {
-          greeting = FIRST_TIME_GREETING;
+          greeting = getFirstTimeGreeting(userName);
         } else if (currentCount < 4) {
-          greeting = RETURNING_GREETING + CREATE_TAB_HINT;
+          greeting = getReturningGreeting(userName) + CREATE_TAB_HINT;
         } else {
-          greeting = RETURNING_GREETING;
+          greeting = getReturningGreeting(userName);
         }
 
         await supabase
@@ -87,7 +94,7 @@ export default function ChatScreen() {
       setMessages([{ id: '0', role: 'assistant', content: greeting }]);
     } catch (error) {
       console.error('Error initializing chat session:', error);
-      setMessages([{ id: '0', role: 'assistant', content: FIRST_TIME_GREETING }]);
+      setMessages([{ id: '0', role: 'assistant', content: getFirstTimeGreeting() }]);
     }
   };
 
