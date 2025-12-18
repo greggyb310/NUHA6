@@ -49,9 +49,19 @@ export default function ExploreScreen() {
   const chatScrollRef = useRef<ScrollView>(null);
 
   useEffect(() => {
-    loadExcursions();
-    loadWeather();
-    initializeChatSession();
+    const initialize = async () => {
+      try {
+        await loadExcursions();
+        await loadWeather();
+        await initializeChatSession();
+      } catch (error) {
+        console.error('Error initializing screen:', error);
+        setError('Failed to initialize. Please try again.');
+        setLoading(false);
+      }
+    };
+
+    initialize();
   }, []);
 
   const loadWeather = async () => {
@@ -81,6 +91,12 @@ export default function ExploreScreen() {
 
   const initializeChatSession = async () => {
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        console.log('No user found, skipping chat initialization');
+        return;
+      }
+
       const session = await getOrCreateSession('excursion_creator');
       if (session) {
         setSessionId(session.id);
@@ -137,6 +153,7 @@ export default function ExploreScreen() {
     const userMessageText = inputText.trim();
     setInputText('');
     setSendingMessage(true);
+    setError(null);
 
     const userMessage: StoredMessage = {
       id: Date.now().toString(),
@@ -162,6 +179,7 @@ export default function ExploreScreen() {
 
       if (result.error) {
         setError(result.error);
+        setChatMessages((prev) => prev.filter((msg) => msg.id !== userMessage.id));
       } else if (result.reply) {
         const assistantMessage: StoredMessage = {
           id: (Date.now() + 1).toString(),
@@ -179,7 +197,8 @@ export default function ExploreScreen() {
       }
     } catch (error) {
       console.error('Error sending message:', error);
-      setError('Failed to send message');
+      setError('Failed to send message. Please try again.');
+      setChatMessages((prev) => prev.filter((msg) => msg.id !== userMessage.id));
     } finally {
       setSendingMessage(false);
     }
@@ -209,67 +228,69 @@ export default function ExploreScreen() {
         >
           <MinimalWeather weather={weather} loading={weatherLoading} />
 
-          <View style={styles.chatSection}>
-            <Text style={styles.chatTitle}>Ask About Nature Spots</Text>
-            <View style={styles.chatContainer}>
-              <ScrollView
-                ref={chatScrollRef}
-                style={styles.chatMessages}
-                contentContainerStyle={styles.chatMessagesContent}
-              >
-                {chatMessages.length === 0 ? (
-                  <Text style={styles.chatPlaceholder}>
-                    Ask me about nearby trails, parks, or outdoor activities
-                  </Text>
-                ) : (
-                  chatMessages.map((message) => (
-                    <View
-                      key={message.id}
-                      style={[
-                        styles.messageContainer,
-                        message.role === 'user' ? styles.userMessage : styles.assistantMessage,
-                      ]}
-                    >
-                      <Text
+          {sessionId && (
+            <View style={styles.chatSection}>
+              <Text style={styles.chatTitle}>Ask About Nature Spots</Text>
+              <View style={styles.chatContainer}>
+                <ScrollView
+                  ref={chatScrollRef}
+                  style={styles.chatMessages}
+                  contentContainerStyle={styles.chatMessagesContent}
+                >
+                  {chatMessages.length === 0 ? (
+                    <Text style={styles.chatPlaceholder}>
+                      Ask me about nearby trails, parks, or outdoor activities
+                    </Text>
+                  ) : (
+                    chatMessages.map((message) => (
+                      <View
+                        key={message.id}
                         style={[
-                          styles.messageText,
-                          message.role === 'user' ? styles.userMessageText : styles.assistantMessageText,
+                          styles.messageContainer,
+                          message.role === 'user' ? styles.userMessage : styles.assistantMessage,
                         ]}
                       >
-                        {message.content}
-                      </Text>
+                        <Text
+                          style={[
+                            styles.messageText,
+                            message.role === 'user' ? styles.userMessageText : styles.assistantMessageText,
+                          ]}
+                        >
+                          {message.content}
+                        </Text>
+                      </View>
+                    ))
+                  )}
+                  {sendingMessage && (
+                    <View style={[styles.messageContainer, styles.assistantMessage]}>
+                      <ActivityIndicator size="small" color="#4A7C2E" />
                     </View>
-                  ))
-                )}
-                {sendingMessage && (
-                  <View style={[styles.messageContainer, styles.assistantMessage]}>
-                    <ActivityIndicator size="small" color="#4A7C2E" />
-                  </View>
-                )}
-              </ScrollView>
+                  )}
+                </ScrollView>
 
-              <View style={styles.chatInputContainer}>
-                <TextInput
-                  style={styles.chatInput}
-                  value={inputText}
-                  onChangeText={setInputText}
-                  placeholder="Type a message..."
-                  placeholderTextColor="#999"
-                  multiline
-                  maxLength={500}
-                  editable={!sendingMessage}
-                />
-                <TouchableOpacity
-                  style={[styles.sendButton, (!inputText.trim() || sendingMessage) && styles.sendButtonDisabled]}
-                  onPress={handleSendMessage}
-                  disabled={!inputText.trim() || sendingMessage}
-                  activeOpacity={0.7}
-                >
-                  <Text style={styles.sendButtonText}>Send</Text>
-                </TouchableOpacity>
+                <View style={styles.chatInputContainer}>
+                  <TextInput
+                    style={styles.chatInput}
+                    value={inputText}
+                    onChangeText={setInputText}
+                    placeholder="Type a message..."
+                    placeholderTextColor="#999"
+                    multiline
+                    maxLength={500}
+                    editable={!sendingMessage}
+                  />
+                  <TouchableOpacity
+                    style={[styles.sendButton, (!inputText.trim() || sendingMessage) && styles.sendButtonDisabled]}
+                    onPress={handleSendMessage}
+                    disabled={!inputText.trim() || sendingMessage}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.sendButtonText}>Send</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             </View>
-          </View>
+          )}
 
           {error && (
             <View style={styles.errorContainer}>
