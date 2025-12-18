@@ -1,5 +1,4 @@
 import { supabase } from './supabase';
-import Constants from 'expo-constants';
 
 export interface NatureSpot {
   id: string;
@@ -93,8 +92,12 @@ export async function searchNatureSpotsNearby(
       }
     }
 
-    const supabaseUrl = Constants.expoConfig?.extra?.EXPO_PUBLIC_SUPABASE_URL || process.env.EXPO_PUBLIC_SUPABASE_URL;
-    const supabaseAnonKey = Constants.expoConfig?.extra?.EXPO_PUBLIC_SUPABASE_ANON_KEY || process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+    const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
+    const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+
+    if (!supabaseUrl || !supabaseAnonKey) {
+      throw new Error('Missing Supabase environment variables');
+    }
 
     console.log('Nature Spots: Fetching from edge function');
     console.log('Nature Spots: URL:', `${supabaseUrl}/functions/v1/nearby-places`);
