@@ -13,6 +13,8 @@ export interface UserProfile {
   therapy_preferences: string[] | null;
   health_goals: string[] | null;
   preferences: Record<string, unknown> | null;
+  risk_tolerance: string | null;
+  chat_session_count: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -68,6 +70,8 @@ export async function updateUserProfile(
     therapy_preferences?: string[];
     health_goals?: string[];
     preferences?: Record<string, unknown>;
+    risk_tolerance?: string;
+    chat_session_count?: number;
   }
 ): Promise<UserProfile | null> {
   const { data, error } = await supabase

@@ -29,12 +29,12 @@ interface Message {
   content: string;
 }
 
-const AI_GREETING = "Hi there! I'm your nature wellness guide. I can help you plan a personalized outdoor experience based on how you're feeling today. What kind of nature experience are you looking for? You can tell me things like how much time you have, what activities interest you, or what you'd like to get out of your time outdoors.";
+const BASE_GREETING = "Hi there! I'm your nature wellness guide. I can help you plan a personalized outdoor experience based on how you're feeling today. What kind of nature experience are you looking for? You can tell me things like how much time you have, what activities interest you, or what you'd like to get out of your time outdoors.";
+
+const CREATE_TAB_HINT = "\n\nOr tap the Create icon below to build your excursion with more options.";
 
 export default function ChatScreen() {
-  const [messages, setMessages] = useState<Message[]>([
-    { id: '0', role: 'assistant', content: AI_GREETING }
-  ]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
   const [sending, setSending] = useState(false);
   const [weather, setWeather] = useState<WeatherData | null>(null);
@@ -55,8 +55,31 @@ export default function ChatScreen() {
       if (session) {
         setSessionId(session.id);
       }
+
+      const { data: { user } } = await supabase.auth.getUser();
+      let showHint = true;
+
+      if (user) {
+        const { data: profile } = await supabase
+          .from('user_profiles')
+          .select('chat_session_count')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        const currentCount = profile?.chat_session_count || 0;
+        showHint = currentCount < 4;
+
+        await supabase
+          .from('user_profiles')
+          .update({ chat_session_count: currentCount + 1 })
+          .eq('user_id', user.id);
+      }
+
+      const greeting = showHint ? BASE_GREETING + CREATE_TAB_HINT : BASE_GREETING;
+      setMessages([{ id: '0', role: 'assistant', content: greeting }]);
     } catch (error) {
       console.error('Error initializing chat session:', error);
+      setMessages([{ id: '0', role: 'assistant', content: BASE_GREETING }]);
     }
   };
 
@@ -234,10 +257,11 @@ export default function ChatScreen() {
       }
 
       const excursionData = result.result;
+      const destination = excursionData.destination!;
       const startLat = location.coords.latitude;
       const startLng = location.coords.longitude;
-      const destLat = excursionData.destination.lat;
-      const destLng = excursionData.destination.lng;
+      const destLat = destination.lat;
+      const destLng = destination.lng;
 
       const routeWaypoints = [];
       for (let i = 0; i <= 8; i++) {
@@ -258,7 +282,7 @@ export default function ChatScreen() {
             steps: excursionData.steps,
             start_location: { lat: startLat, lng: startLng },
             destination: {
-              name: excursionData.destination.name,
+              name: destination.name,
               lat: destLat,
               lng: destLng,
             },
