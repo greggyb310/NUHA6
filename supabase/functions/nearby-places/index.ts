@@ -87,6 +87,16 @@ async function setCache(cacheKey: string, value: PlacesResponse, ttlMinutes = 36
 }
 
 Deno.serve(async (req: Request) => {
+  const perfStart = Date.now();
+  const perfMarks: Record<string, number> = {};
+  const mark = (label: string) => {
+    perfMarks[label] = Date.now();
+    const elapsed = Date.now() - perfStart;
+    console.log(`[PERF] ${label}: ${elapsed}ms`);
+  };
+
+  mark('request_start');
+
   if (req.method === "OPTIONS") {
     return new Response(null, {
       status: 200,
@@ -96,6 +106,7 @@ Deno.serve(async (req: Request) => {
 
   try {
     const { latitude, longitude }: RequestBody = await req.json();
+    mark('body_parsed');
 
     if (!latitude || !longitude) {
       return new Response(
@@ -113,8 +124,11 @@ Deno.serve(async (req: Request) => {
     const radius = 8046.72;
     const cacheKey = getCacheKey(latitude, longitude, radius);
     const cached = await getFromCache(cacheKey);
+    mark('cache_checked');
 
     if (cached) {
+      const totalTime = Date.now() - perfStart;
+      console.log(`[PERF] Total request time (cache hit): ${totalTime}ms`);
       return new Response(
         JSON.stringify(cached),
         {
@@ -147,7 +161,21 @@ Deno.serve(async (req: Request) => {
       { route: "hiking", type: "hiking trail" },
     ];
 
-    for (const query of queries) {
+    const fetchWithTimeout = async (url: string, timeoutMs: number = 10000) => {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+      try {
+        const response = await fetch(url, { signal: controller.signal });
+        clearTimeout(timeoutId);
+        return response;
+      } catch (error) {
+        clearTimeout(timeoutId);
+        throw error;
+      }
+    };
+
+    const queryPromises = queries.map(async (query) => {
       const key = Object.keys(query).find(k => k !== 'type');
       const value = key ? query[key as keyof typeof query] : '';
       const type = query.type;
@@ -155,22 +183,22 @@ Deno.serve(async (req: Request) => {
       const url = `https://overpass-api.de/api/interpreter?data=[out:json];(node[${key}=${value}](around:${radius},${latitude},${longitude});way[${key}=${value}](around:${radius},${latitude},${longitude}););out center;`;
 
       try {
-        const response = await fetch(url);
+        const response = await fetchWithTimeout(url, 10000);
         const data = await response.json();
 
-        debugInfo.searches.push({
+        const searchResult = {
           query: `${key}=${value}`,
           status: response.status,
           resultCount: data.elements?.length || 0,
-        });
+        };
 
         if (data.elements && data.elements.length > 0) {
           const places = data.elements.slice(0, 5).map((element: any) => {
             const lat = element.lat || element.center?.lat;
             const lng = element.lon || element.center?.lon;
-            
+
             if (!lat || !lng) return null;
-            
+
             const distance = calculateDistance(latitude, longitude, lat, lng);
 
             return {
@@ -183,17 +211,35 @@ Deno.serve(async (req: Request) => {
             };
           }).filter((place: any) => place !== null);
 
-          allPlaces.push(...places);
-          debugInfo.totalResults += places.length;
+          return { places, searchResult };
         }
+
+        return { places: [], searchResult };
       } catch (error) {
         console.error(`Error fetching ${key}=${value}:`, error);
+        return {
+          places: [],
+          searchResult: {
+            query: `${key}=${value}`,
+            status: 'timeout',
+            resultCount: 0,
+          }
+        };
       }
+    });
 
-      if (allPlaces.length >= 15) {
-        break;
+    const results = await Promise.allSettled(queryPromises);
+    mark('all_queries_complete');
+
+    results.forEach((result) => {
+      if (result.status === 'fulfilled' && result.value) {
+        allPlaces.push(...result.value.places);
+        debugInfo.searches.push(result.value.searchResult);
+        debugInfo.totalResults += result.value.places.length;
+      } else if (result.status === 'rejected') {
+        console.error('Query failed:', result.reason);
       }
-    }
+    });
 
     allPlaces.sort((a, b) => a.distance - b.distance);
     const uniquePlaces = Array.from(
@@ -205,6 +251,11 @@ Deno.serve(async (req: Request) => {
 
     const result = { places: topThree, debug: debugInfo };
     await setCache(cacheKey, result, 360);
+    mark('cache_saved');
+
+    const totalTime = Date.now() - perfStart;
+    console.log(`[PERF] Total request time (cache miss): ${totalTime}ms`);
+    console.log('[PERF] Breakdown:', JSON.stringify(perfMarks, null, 2));
 
     return new Response(
       JSON.stringify(result),

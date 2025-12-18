@@ -195,8 +195,18 @@ export default function CreateScreen() {
     setError(null);
 
     try {
+      const perfStart = Date.now();
+      const perfMarks: Record<string, number> = {};
+      const mark = (label: string) => {
+        perfMarks[label] = Date.now();
+        console.log(`[PERF] ${label}: ${Date.now() - perfStart}ms`);
+      };
+
       console.log('Starting excursion creation...');
+      mark('start');
+
       const { data: { user } } = await supabase.auth.getUser();
+      mark('auth_complete');
       if (!user) {
         setError('Please sign in to create an excursion.');
         setLoading(false);
@@ -207,17 +217,16 @@ export default function CreateScreen() {
       const nearbyResult = await searchNatureSpotsNearby(
         location.coords.latitude,
         location.coords.longitude,
-        10
+        5
       );
+      mark('places_fetched');
 
       const nearbyPlaces = nearbyResult.places.map(place => ({
         name: place.name,
         lat: place.latitude,
         lng: place.longitude,
         type: place.type,
-        source: place.source,
         difficulty: place.difficulty,
-        length: place.length,
         star_rating: place.star_rating,
       }));
 
@@ -251,6 +260,7 @@ export default function CreateScreen() {
         preferences,
         nearbyPlaces,
       });
+      mark('ai_complete');
 
       console.log('AI result:', result);
 
@@ -330,6 +340,12 @@ export default function CreateScreen() {
       }
 
       console.log('Excursion saved with ID:', insertedData.id);
+      mark('db_saved');
+
+      const totalTime = Date.now() - perfStart;
+      console.log(`[PERF] Total excursion creation time: ${totalTime}ms (${(totalTime / 1000).toFixed(1)}s)`);
+      console.log('[PERF] Breakdown:', JSON.stringify(perfMarks, null, 2));
+
       setLoading(false);
 
       console.log('Navigating to detail page...');
