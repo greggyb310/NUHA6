@@ -4,11 +4,16 @@ import { sendVoiceMessage as sendVoiceToApi, base64ToDataUri } from './voice';
 import { getUserProfile } from './user-profile';
 import type { ChatMessage, HealthCoachResult } from '@/types/ai';
 
+export type ConversationPhase = 'initial_chat' | 'excursion_creation' | 'excursion_guiding' | 'post_excursion_followup';
+
 export interface ChatSession {
   id: string;
   user_id: string | null;
   assistant_type: string;
   title: string;
+  phase: ConversationPhase;
+  conversation_metadata: Record<string, unknown>;
+  excursion_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -25,7 +30,11 @@ export interface StoredMessage {
   transcript?: string;
 }
 
-export async function createSession(assistantType = 'health_coach'): Promise<ChatSession | null> {
+export async function createSession(
+  assistantType = 'health_coach',
+  phase: ConversationPhase = 'initial_chat',
+  excursionId?: string
+): Promise<ChatSession | null> {
   const { data: { user } } = await supabase.auth.getUser();
 
   const { data, error } = await supabase
@@ -34,6 +43,9 @@ export async function createSession(assistantType = 'health_coach'): Promise<Cha
       assistant_type: assistantType,
       title: 'New Conversation',
       user_id: user?.id || null,
+      phase,
+      conversation_metadata: {},
+      excursion_id: excursionId || null,
     })
     .select()
     .single();
@@ -139,14 +151,13 @@ export async function sendMessage(
 ): Promise<{ reply: string; readyToCreate?: boolean; error?: string }> {
   await saveMessage(sessionId, 'user', userMessage);
 
-  // If assistantType wasn't provided, infer it from the session record
-  if (!assistantType) {
-    const { data: sessionRow, error: sessionErr } = await supabase
-      .from('chat_sessions')
-      .select('assistant_type')
-      .eq('id', sessionId)
-      .single();
+  const { data: sessionRow, error: sessionErr } = await supabase
+    .from('chat_sessions')
+    .select('assistant_type, phase, conversation_metadata')
+    .eq('id', sessionId)
+    .maybeSingle();
 
+  if (!assistantType) {
     if (!sessionErr && sessionRow?.assistant_type) {
       assistantType = sessionRow.assistant_type;
     } else {
@@ -154,18 +165,25 @@ export async function sendMessage(
     }
   }
 
+  const phase = sessionRow?.phase || 'initial_chat';
+  const sessionMetadata = sessionRow?.conversation_metadata || {};
+
   const historyForApi: ChatMessage[] = conversationHistory.map((msg) => ({
     role: msg.role,
     content: msg.content,
   }));
 
   const { data: { user } } = await supabase.auth.getUser();
-  let userContext: Record<string, unknown> = {};
+  let userContext: Record<string, unknown> = {
+    phase,
+    session_metadata: sessionMetadata,
+  };
 
   if (user) {
     const profile = await getUserProfile(user.id);
     if (profile) {
       userContext = {
+        ...userContext,
         activity_preferences: profile.activity_preferences || [],
         therapy_preferences: profile.therapy_preferences || [],
         health_goals: profile.health_goals || [],
@@ -261,6 +279,74 @@ export async function sendVoiceMessage(
     reply: voiceResult.responseText,
     replyAudioBase64: voiceResult.responseAudioBase64,
   };
+}
+
+export async function updateSessionPhase(
+  sessionId: string,
+  phase: ConversationPhase
+): Promise<boolean> {
+  const { error } = await supabase
+    .from('chat_sessions')
+    .update({ phase, updated_at: new Date().toISOString() })
+    .eq('id', sessionId);
+
+  if (error) {
+    console.error('Error updating session phase:', error);
+    return false;
+  }
+
+  return true;
+}
+
+export async function updateSessionMetadata(
+  sessionId: string,
+  metadata: Record<string, unknown>
+): Promise<boolean> {
+  const { data: session, error: fetchError } = await supabase
+    .from('chat_sessions')
+    .select('conversation_metadata')
+    .eq('id', sessionId)
+    .maybeSingle();
+
+  if (fetchError || !session) {
+    console.error('Error fetching session:', fetchError);
+    return false;
+  }
+
+  const updatedMetadata = {
+    ...(session.conversation_metadata || {}),
+    ...metadata,
+  };
+
+  const { error: updateError } = await supabase
+    .from('chat_sessions')
+    .update({
+      conversation_metadata: updatedMetadata,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', sessionId);
+
+  if (updateError) {
+    console.error('Error updating session metadata:', updateError);
+    return false;
+  }
+
+  return true;
+}
+
+export async function getSession(sessionId: string): Promise<ChatSession | null> {
+  const { data, error } = await supabase
+    .from('chat_sessions')
+    .select('*')
+    .eq('id', sessionId)
+    .maybeSingle();
+
+  if (error) {
+    console.error('Error fetching session:', error);
+    return null;
+  }
+
+  return data;
 }
 
 export async function clearSession(sessionId: string): Promise<boolean> {

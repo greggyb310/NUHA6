@@ -134,6 +134,8 @@ const openaiProvider: Provider = {
 
 function getSystemPrompt(action: AiAction, context?: Record<string, unknown>): string {
   let userPrefsSection = '';
+  const phase = (context?.phase as string) || 'initial_chat';
+  const sessionMetadata = (context?.session_metadata as Record<string, unknown>) || {};
 
   if (context) {
     const activityPrefs = context.activity_preferences as string[] || [];
@@ -170,7 +172,18 @@ function getSystemPrompt(action: AiAction, context?: Record<string, unknown>): s
       return NATUREUP_SYSTEM_PROMPT + userPrefsSection;
 
     case 'excursion_creator_message':
-      return `You are helping someone plan a nature excursion.
+      const hasDuration = sessionMetadata.duration_minutes || sessionMetadata.detected_duration;
+      const hasLocation = sessionMetadata.location_preference || sessionMetadata.specified_location;
+
+      let metadataContext = '';
+      if (hasDuration) {
+        metadataContext += `\nCOLLECTED INFO:\n- Duration: ${sessionMetadata.duration_minutes || sessionMetadata.detected_duration} minutes\n`;
+      }
+      if (hasLocation) {
+        metadataContext += `- Location preference: ${sessionMetadata.location_preference || sessionMetadata.specified_location}\n`;
+      }
+
+      return `You are helping someone plan a nature excursion. CURRENT PHASE: ${phase}
 
 CRITICAL RULES:
 - Write 1 short sentence
@@ -181,21 +194,21 @@ YOUR GOAL:
 Get TWO required pieces of information:
 1. Duration (how long they have)
 2. Location preference (specific place OR want suggestions)
-
+${metadataContext}
 CONVERSATION FLOW:
-Step 1: If duration NOT mentioned yet → Ask "How long do you have?"
-Step 2: If duration mentioned but location preference NOT clear → Ask "Do you have a trail in mind or want me to give you some options?"
-Step 3: If BOTH duration AND location preference provided → Set readyToCreate=true
+Step 1: If duration NOT collected yet → Ask "How long do you have?"
+Step 2: If duration collected but location preference NOT clear → Ask "Do you have a trail in mind or want me to give you some options?"
+Step 3: If BOTH collected → Set readyToCreate=true
 
 LOCATION PREFERENCE EXAMPLES:
-- "surprise me" / "you choose" / "give me options" = wants suggestions
-- "I know a place" / specific trail name = has a location
+- "surprise me" / "you choose" / "give me options" = wants AI suggestions
+- "I know a place" / specific trail name = has their own location
 - ANY clear indication of where they want to go
 
 WHEN TO SET readyToCreate=true:
 ONLY when you have BOTH:
 1. Duration (like "1 hour", "30 minutes")
-2. Location preference (either specific place OR they want suggestions)${userPrefsSection}
+2. Location preference (either wants suggestions OR has specific place)${userPrefsSection}
 
 RESPONSE FORMAT (JSON):
 Always respond with valid JSON:
