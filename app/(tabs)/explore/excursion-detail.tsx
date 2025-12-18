@@ -34,21 +34,11 @@ export default function ExcursionDetailScreen() {
   const [error, setError] = useState<string | null>(null);
   const [stepsExpanded, setStepsExpanded] = useState(false);
   const [checklistExpanded, setChecklistExpanded] = useState(false);
-  const [contentReady, setContentReady] = useState(false);
   const [travelDuration, setTravelDuration] = useState<number | null>(null);
 
   useEffect(() => {
     loadExcursion();
   }, [id]);
-
-  useEffect(() => {
-    if (!loading && excursion) {
-      const timer = setTimeout(() => {
-        setContentReady(true);
-      }, 300);
-      return () => clearTimeout(timer);
-    }
-  }, [loading, excursion]);
 
   const loadExcursion = async () => {
     try {
@@ -134,12 +124,12 @@ export default function ExcursionDetailScreen() {
     );
   }
 
-  if (loading || !contentReady) {
+  if (loading) {
     return <LoadingScreen message="Loading your nature experience..." />;
   }
 
   if (!excursion) {
-    return <LoadingScreen message="Loading your nature experience..." />;
+    return null;
   }
 
   const userLocation = userLat && userLng
@@ -371,7 +361,7 @@ export default function ExcursionDetailScreen() {
 
         <TouchableOpacity
           style={styles.secondaryButton}
-          onPress={() => router.push('/(tabs)/explore')}
+          onPress={() => router.replace('/(tabs)/explore')}
         >
           <Text style={styles.secondaryButtonText}>View All Excursions</Text>
         </TouchableOpacity>

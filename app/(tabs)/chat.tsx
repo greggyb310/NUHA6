@@ -412,16 +412,14 @@ export default function CreateScreen() {
       setLoading(false);
 
       console.log('Navigating to detail page...');
-      setTimeout(() => {
-        router.push({
-          pathname: '/(tabs)/explore/excursion-detail',
-          params: {
-            id: insertedData.id,
-            userLat: location.coords.latitude.toString(),
-            userLng: location.coords.longitude.toString(),
-          },
-        });
-      }, 100);
+      router.replace({
+        pathname: '/(tabs)/explore/excursion-detail',
+        params: {
+          id: insertedData.id,
+          userLat: location.coords.latitude.toString(),
+          userLng: location.coords.longitude.toString(),
+        },
+      });
     } catch (err) {
       console.error('Error creating excursion:', err);
       setError(`An unexpected error occurred: ${err instanceof Error ? err.message : 'Unknown error'}`);
