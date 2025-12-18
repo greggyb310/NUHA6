@@ -208,22 +208,23 @@ If the user requests specific changes to the excursion (duration, location, diff
 }${userPrefsSection}`;
       }
 
-      const hasDuration = sessionMetadata.duration_minutes || sessionMetadata.detected_duration;
-      const hasLocation = sessionMetadata.location_preference || sessionMetadata.specified_location;
-      const askedConfirmation = sessionMetadata.asked_confirmation || false;
+      if (phase === 'excursion_planning' || phase === 'initial_chat') {
+        const hasDuration = sessionMetadata.duration_minutes || sessionMetadata.detected_duration;
+        const hasLocation = sessionMetadata.location_preference || sessionMetadata.specified_location;
+        const askedConfirmation = sessionMetadata.asked_confirmation || false;
 
-      let metadataContext = '';
-      if (hasDuration) {
-        metadataContext += `\nCOLLECTED INFO:\n- Duration: ${sessionMetadata.duration_minutes || sessionMetadata.detected_duration} minutes\n`;
-      }
-      if (hasLocation) {
-        metadataContext += `- Location preference: ${sessionMetadata.location_preference || sessionMetadata.specified_location}\n`;
-      }
-      if (askedConfirmation) {
-        metadataContext += `- Already asked for confirmation\n`;
-      }
+        let metadataContext = '';
+        if (hasDuration) {
+          metadataContext += `\nCOLLECTED INFO:\n- Duration: ${sessionMetadata.duration_minutes || sessionMetadata.detected_duration} minutes\n`;
+        }
+        if (hasLocation) {
+          metadataContext += `- Location preference: ${sessionMetadata.location_preference || sessionMetadata.specified_location}\n`;
+        }
+        if (askedConfirmation) {
+          metadataContext += `- Already asked for confirmation\n`;
+        }
 
-      return `You are helping someone plan a nature excursion. CURRENT PHASE: ${phase}
+        return `You are helping someone plan a nature excursion. CURRENT PHASE: Excursion Planning
 
 CRITICAL RULES:
 - Write 1 short sentence
@@ -267,6 +268,9 @@ When asking for confirmation:
 
 When user confirms:
 {"reply": "Perfect! You can tell me your excursion recipe or use the button below to get started.", "readyToCreate": true}`;
+      }
+
+      return 'You are a helpful AI assistant for nature excursions. Output JSON only.';
 
     case 'excursion_plan':
       return `You are an AI assistant that creates personalized nature therapy excursions.

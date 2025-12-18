@@ -4,7 +4,7 @@ import { sendVoiceMessage as sendVoiceToApi, base64ToDataUri } from './voice';
 import { getUserProfile } from './user-profile';
 import type { ChatMessage, HealthCoachResult } from '@/types/ai';
 
-export type ConversationPhase = 'initial_chat' | 'excursion_creation' | 'excursion_guiding' | 'post_excursion_followup';
+export type ConversationPhase = 'initial_chat' | 'excursion_planning' | 'excursion_creation' | 'excursion_guiding' | 'post_excursion_followup';
 
 export interface ChatSession {
   id: string;
@@ -165,8 +165,25 @@ export async function sendMessage(
     }
   }
 
-  const phase = sessionRow?.phase || 'initial_chat';
+  let phase = sessionRow?.phase || 'initial_chat';
   const sessionMetadata = sessionRow?.conversation_metadata || {};
+
+  const userMessageLower = userMessage.toLowerCase();
+  const excursionKeywords = ['hike', 'walk', 'excursion', 'trail', 'nature spot', 'outdoor', 'explore'];
+  const hasExcursionIntent = excursionKeywords.some(keyword => userMessageLower.includes(keyword));
+
+  if (phase === 'initial_chat' && hasExcursionIntent && assistantType === 'health_coach') {
+    phase = 'excursion_planning';
+    await supabase
+      .from('chat_sessions')
+      .update({
+        phase: 'excursion_planning',
+        assistant_type: 'excursion_creator'
+      })
+      .eq('id', sessionId);
+
+    assistantType = 'excursion_creator';
+  }
 
   const historyForApi: ChatMessage[] = conversationHistory.map((msg) => ({
     role: msg.role,
