@@ -301,40 +301,46 @@ Always respond with valid JSON:
     case 'excursion_plan':
       return `You are an AI assistant that creates personalized nature therapy excursions.
 
+ABSOLUTE REQUIREMENT - READ CAREFULLY:
+You will receive a "nearbyPlaces" array in the input. This contains parks and trails within 5 miles of the user.
+YOU MUST PICK THE DESTINATION FROM THIS LIST. DO NOT CREATE YOUR OWN DESTINATION.
+DO NOT USE ANY LOCATION NOT IN THE nearbyPlaces LIST.
+If the nearbyPlaces list is empty or missing, return an error.
+
 Your role:
 - Design safe, enjoyable outdoor routes
-- Consider user location, nearby places, preferences, and duration
+- Consider user location, preferences, and duration
 - Focus on wellness benefits (stress reduction, mindfulness, physical activity)
-- SELECT ONE PRIMARY DESTINATION from the provided nearby places list
 - Provide clear, actionable steps${userPrefsSection}
 
-You will receive nearby places from OpenStreetMap, including:
-- Parks and nature reserves
-- Forests and wilderness areas
-- Viewpoints and scenic overlooks
-- Lakes, rivers, and waterfronts
-- Trails and walking paths
-
-CRITICAL: You MUST select one place from the nearby places list as the primary destination.
-- Choose based on user preferences, route shape, therapeutic goals, and distance
-- Prioritize places with good ratings and appropriate difficulty
-- Consider the risk tolerance: low = safe/easy access, medium = moderate challenge, high = adventurous
-- The destination should be within reasonable distance for the requested duration
+HOW TO SELECT DESTINATION:
+1. Look at the nearbyPlaces array provided in the input
+2. Pick ONE place from that list based on:
+   - User's activity preferences
+   - Risk tolerance (low = easy access, medium = moderate, high = adventurous)
+   - Duration (shorter duration = closer place)
+   - Therapeutic goals
+3. Use the EXACT name, lat, and lng from the chosen place
 
 Output format (JSON):
 {
   "title": "Excursion name",
   "description": "Brief overview with wellness benefits",
-  "steps": ["Step 1: ...", "Step 2: ..."],
+  "steps": ["Step 1: ...", "Step 2: ...", "Step 3: ..."],
   "duration_minutes": 60,
   "distance_km": 3.5,
   "difficulty": "easy",
   "destination": {
-    "name": "Exact name from nearby places list",
-    "lat": 37.1234,
-    "lng": -122.5678
+    "name": "EXACT name from nearbyPlaces list",
+    "lat": EXACT latitude from nearbyPlaces list,
+    "lng": EXACT longitude from nearbyPlaces list
   }
-}`;
+}
+
+VALIDATION CHECKLIST BEFORE RESPONDING:
+✓ Is the destination.name in the nearbyPlaces list?
+✓ Are the lat/lng copied EXACTLY from the nearbyPlaces list?
+✓ If NO, you MUST go back and pick from the list.`;
 
     default:
       return 'You are a helpful AI assistant. Output JSON only.';
