@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ImageBackground, Image, ActivityIndicator, ImageSourcePropType } from 'react-native';
+import { View, Text, StyleSheet, ImageBackground, Image, ActivityIndicator, ImageSourcePropType, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { supabase } from '@/services/supabase';
 import { LinearGradient } from 'expo-linear-gradient';
+import { MessageCircle } from 'lucide-react-native';
 
 const IMAGE_MAP: Record<string, ImageSourcePropType> = {
   'img_1335_medium.jpeg': require('@/assets/images/img_1335_medium.jpeg'),
@@ -111,6 +112,14 @@ export default function HomeScreen() {
                   )}
                 </View>
               ) : null}
+
+              <TouchableOpacity
+                style={styles.createButton}
+                onPress={() => router.push('/chat')}
+              >
+                <MessageCircle size={24} color="#FFFFFF" />
+                <Text style={styles.createButtonText}>Create Excursion</Text>
+              </TouchableOpacity>
             </View>
 
             <View style={styles.bottomSection}>
@@ -188,6 +197,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 32,
+    gap: 32,
   },
   quoteContainer: {
     backgroundColor: 'rgba(255, 255, 255, 0.15)',
@@ -233,5 +243,25 @@ const styles = StyleSheet.create({
     textShadowColor: 'rgba(0, 0, 0, 0.75)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 2,
+  },
+  createButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#4A7C2E',
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    borderRadius: 30,
+    gap: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  createButtonText: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
 });

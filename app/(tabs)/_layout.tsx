@@ -29,6 +29,7 @@ export default function TabLayout() {
           tabBarIcon: ({ size, color }) => (
             <MessageCircle size={size} color={color} />
           ),
+          href: null,
         }}
       />
       <Tabs.Screen
@@ -38,6 +39,7 @@ export default function TabLayout() {
           tabBarIcon: ({ size, color }) => (
             <MapPin size={size} color={color} />
           ),
+          href: null,
         }}
       />
       <Tabs.Screen
