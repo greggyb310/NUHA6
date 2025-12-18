@@ -215,6 +215,20 @@ export async function sendMessage(
 
   const assistantReply = response.result.reply;
   const readyToCreate = response.result.readyToCreate;
+  const askedConfirmation = (response.result as any).askedConfirmation;
+
+  if (askedConfirmation !== undefined) {
+    const updatedMetadata = {
+      ...sessionMetadata,
+      asked_confirmation: askedConfirmation,
+    };
+
+    await supabase
+      .from('chat_sessions')
+      .update({ conversation_metadata: updatedMetadata })
+      .eq('id', sessionId);
+  }
+
   await saveMessage(sessionId, 'assistant', assistantReply);
 
   return { reply: assistantReply, readyToCreate };

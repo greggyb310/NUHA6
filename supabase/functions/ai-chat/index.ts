@@ -210,6 +210,7 @@ If the user requests specific changes to the excursion (duration, location, diff
 
       const hasDuration = sessionMetadata.duration_minutes || sessionMetadata.detected_duration;
       const hasLocation = sessionMetadata.location_preference || sessionMetadata.specified_location;
+      const askedConfirmation = sessionMetadata.asked_confirmation || false;
 
       let metadataContext = '';
       if (hasDuration) {
@@ -217,6 +218,9 @@ If the user requests specific changes to the excursion (duration, location, diff
       }
       if (hasLocation) {
         metadataContext += `- Location preference: ${sessionMetadata.location_preference || sessionMetadata.specified_location}\n`;
+      }
+      if (askedConfirmation) {
+        metadataContext += `- Already asked for confirmation\n`;
       }
 
       return `You are helping someone plan a nature excursion. CURRENT PHASE: ${phase}
@@ -227,31 +231,42 @@ CRITICAL RULES:
 - DO NOT give hiking instructions or wellness tips yet
 
 YOUR GOAL:
-Get TWO required pieces of information:
+Get THREE things in order:
 1. Duration (how long they have)
 2. Location preference (specific place OR want suggestions)
+3. Confirmation to show options
 ${metadataContext}
 CONVERSATION FLOW:
-Step 1: If duration NOT collected yet → Ask "How long do you have?"
+Step 1: If duration NOT collected → Ask "How long do you have?"
 Step 2: If duration collected but location preference NOT clear → Ask "Do you have a trail in mind or want me to give you some options?"
-Step 3: If BOTH collected → Set readyToCreate=true
+Step 3: If BOTH collected but haven't asked confirmation → Ask "Can I show you some options?" and set askedConfirmation=true
+Step 4: If confirmation given → Set readyToCreate=true
 
 LOCATION PREFERENCE EXAMPLES:
 - "surprise me" / "you choose" / "give me options" = wants AI suggestions
 - "I know a place" / specific trail name = has their own location
 - ANY clear indication of where they want to go
 
+CONFIRMATION DETECTION:
+If user responds with ANY affirmative response after you asked "Can I show you some options?":
+- "yes" / "yeah" / "sure" / "ok" / "please" / "go ahead" / "show me" = confirmed
+- Set readyToCreate=true
+
 WHEN TO SET readyToCreate=true:
-ONLY when you have BOTH:
-1. Duration (like "1 hour", "30 minutes")
-2. Location preference (either wants suggestions OR has specific place)${userPrefsSection}
+ONLY when ALL THREE are done:
+1. Duration collected
+2. Location preference collected
+3. User confirmed they want to see options${userPrefsSection}
 
 RESPONSE FORMAT (JSON):
 Always respond with valid JSON:
 {"reply": "Your short question here", "readyToCreate": false}
 
-When you have BOTH pieces of info:
-{"reply": "Perfect, let me find the best spot!", "readyToCreate": true}`;
+When asking for confirmation:
+{"reply": "Can I show you some options?", "readyToCreate": false, "askedConfirmation": true}
+
+When user confirms:
+{"reply": "Perfect! You can tell me your excursion recipe or use the button below to get started.", "readyToCreate": true}`;
 
     case 'excursion_plan':
       return `You are an AI assistant that creates personalized nature therapy excursions.
