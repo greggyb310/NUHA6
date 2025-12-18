@@ -55,6 +55,8 @@ const THERAPEUTIC_OPTIONS = [
 ];
 
 const DURATION_OPTIONS = [
+  { value: 2, label: '2 minutes' },
+  { value: 5, label: '5 minutes' },
   { value: 15, label: '15 minutes' },
   { value: 30, label: '30 minutes' },
   { value: 45, label: '45 minutes' },
