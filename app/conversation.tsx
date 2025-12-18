@@ -53,8 +53,7 @@ export default function ConversationScreen() {
         setParsedIntent(intent);
 
         if (existingMessages.length === 0) {
-          const contextMessage = buildInitialMessage(intent);
-          await sendInitialMessage(session.id, contextMessage);
+          await sendInitialMessage(session.id, intent.rawText, intent);
         }
       } else if (existingMessages.length === 0) {
         await sendInitialMessage(session.id, 'I want to create a nature excursion');
@@ -68,31 +67,7 @@ export default function ConversationScreen() {
     }
   };
 
-  const buildInitialMessage = (intent: ParsedIntent): string => {
-    const parts: string[] = [];
-
-    if (intent.durationMinutes) {
-      parts.push(`${intent.durationMinutes} minute`);
-    }
-
-    if (intent.activities && intent.activities.length > 0) {
-      parts.push(intent.activities.join(' and '));
-    }
-
-    if (intent.proximityBias !== 'none') {
-      parts.push(intent.matches?.proximity || 'nearby');
-    }
-
-    if (intent.therapeuticGoals && intent.therapeuticGoals.length > 0) {
-      parts.push(`to ${intent.therapeuticGoals.join(' and ')}`);
-    }
-
-    return parts.length > 0
-      ? `I want a ${parts.join(' ')} excursion`
-      : 'I want to create a nature excursion';
-  };
-
-  const sendInitialMessage = async (sessionId: string, message: string) => {
+  const sendInitialMessage = async (sessionId: string, message: string, intent?: ParsedIntent) => {
     setSending(true);
 
     const conversationHistory: ChatMessage[] = [
@@ -102,7 +77,15 @@ export default function ConversationScreen() {
       },
     ];
 
-    const result = await sendMessage(sessionId, message, conversationHistory, 'excursion_creator');
+    const contextMetadata = intent ? {
+      detected_duration: intent.durationMinutes,
+      detected_activities: intent.activities,
+      detected_proximity: intent.proximityBias,
+      detected_difficulty: intent.difficulty,
+      detected_therapeutic_goals: intent.therapeuticGoals,
+    } : undefined;
+
+    const result = await sendMessage(sessionId, message, conversationHistory, 'excursion_creator', undefined, contextMetadata);
 
     if (result.error) {
       console.error('Error sending message:', result.error);
@@ -222,14 +205,6 @@ export default function ConversationScreen() {
           <X size={24} color="#2D3E1F" />
         </TouchableOpacity>
       </View>
-
-      {parsedIntent && (
-        <View style={styles.intentBanner}>
-          <Text style={styles.intentBannerText}>
-            Based on: {parsedIntent.rawText}
-          </Text>
-        </View>
-      )}
 
       <KeyboardAvoidingView
         style={styles.keyboardAvoidingView}
@@ -362,20 +337,6 @@ const styles = StyleSheet.create({
   },
   closeButton: {
     padding: 4,
-  },
-  intentBanner: {
-    marginHorizontal: 20,
-    marginTop: 12,
-    padding: 12,
-    backgroundColor: '#E8F5E9',
-    borderRadius: 8,
-    borderLeftWidth: 4,
-    borderLeftColor: '#4A7C2E',
-  },
-  intentBannerText: {
-    fontSize: 14,
-    color: '#2D3E1F',
-    fontWeight: '500',
   },
   keyboardAvoidingView: {
     flex: 1,

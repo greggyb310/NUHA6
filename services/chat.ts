@@ -134,7 +134,8 @@ export async function sendMessage(
   userMessage: string,
   conversationHistory: ChatMessage[],
   assistantType: string = 'health_coach',
-  onProgress?: (partialReply: string) => void
+  onProgress?: (partialReply: string) => void,
+  contextMetadata?: Record<string, unknown>
 ): Promise<{ reply: string; readyToCreate?: boolean; error?: string }> {
   await saveMessage(sessionId, 'user', userMessage);
 
@@ -144,7 +145,7 @@ export async function sendMessage(
   }));
 
   const { data: { user } } = await supabase.auth.getUser();
-  let userContext = {};
+  let userContext: Record<string, unknown> = {};
 
   if (user) {
     const profile = await getUserProfile(user.id);
@@ -157,6 +158,10 @@ export async function sendMessage(
         mobility_level: profile.mobility_level,
       };
     }
+  }
+
+  if (contextMetadata) {
+    userContext = { ...userContext, ...contextMetadata };
   }
 
   const action = assistantType === 'excursion_creator' ? 'excursion_creator_message' : 'health_coach_message';
