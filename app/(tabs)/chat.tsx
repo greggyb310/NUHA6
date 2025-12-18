@@ -328,6 +328,7 @@ export default function ChatScreen() {
           id: insertedData.id,
           userLat: location.coords.latitude.toString(),
           userLng: location.coords.longitude.toString(),
+          sessionId: sessionId || '',
         },
       });
     } catch (error) {

@@ -1,14 +1,16 @@
 import { useEffect, useState, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Platform, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Platform, Alert, Modal, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
 import * as Location from 'expo-location';
 import { Audio } from 'expo-av';
 import { supabase } from '@/services/supabase';
-import { X, Mic, Navigation as NavigationIcon, MapPin, Clock } from 'lucide-react-native';
+import { X, Navigation as NavigationIcon, MapPin, Clock, MessageCircle } from 'lucide-react-native';
 import MapScreen from '@/components/map-screen';
 import { LoadingScreen } from '@/components/loading-screen';
 import { createSession, type ChatSession } from '@/services/chat';
+import { EmbeddedChat } from '@/components/embedded-chat';
+import { ExcursionFeedback } from '@/components/excursion-feedback';
 
 interface Excursion {
   id: string;
@@ -37,13 +39,13 @@ export default function ActiveExcursionScreen() {
   const [error, setError] = useState<string | null>(null);
   const [userLocation, setUserLocation] = useState<LocationCoords | null>(null);
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
-  const [isRecording, setIsRecording] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
   const [aiResponse, setAiResponse] = useState<string>('');
   const [distanceToNext, setDistanceToNext] = useState<number | null>(null);
   const [elapsedTime, setElapsedTime] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const [guidingSession, setGuidingSession] = useState<ChatSession | null>(null);
+  const [showChat, setShowChat] = useState(false);
+  const [showFeedback, setShowFeedback] = useState(false);
   const recordingRef = useRef<Audio.Recording | null>(null);
   const locationSubscription = useRef<Location.LocationSubscription | null>(null);
   const startTime = useRef<number>(Date.now());
@@ -176,165 +178,14 @@ export default function ActiveExcursionScreen() {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const startVoiceRecording = async () => {
-    try {
-      const { status } = await Audio.requestPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert('Permission Required', 'Microphone access is needed for voice guidance');
-        return;
-      }
-
-      await Audio.setAudioModeAsync({
-        allowsRecordingIOS: true,
-        playsInSilentModeIOS: true,
-      });
-
-      const recording = new Audio.Recording();
-      await recording.prepareToRecordAsync({
-        ...Audio.RecordingOptionsPresets.HIGH_QUALITY,
-        android: {
-          extension: '.m4a',
-          outputFormat: Audio.AndroidOutputFormat.MPEG_4,
-          audioEncoder: Audio.AndroidAudioEncoder.AAC,
-          sampleRate: 44100,
-          numberOfChannels: 2,
-          bitRate: 128000,
-        },
-        ios: {
-          extension: '.m4a',
-          outputFormat: Audio.IOSOutputFormat.MPEG4AAC,
-          audioQuality: Audio.IOSAudioQuality.HIGH,
-          sampleRate: 44100,
-          numberOfChannels: 2,
-          bitRate: 128000,
-          linearPCMBitDepth: 16,
-          linearPCMIsBigEndian: false,
-          linearPCMIsFloat: false,
-        },
-        web: {
-          mimeType: 'audio/webm',
-          bitsPerSecond: 128000,
-        },
-      });
-
-      await recording.startAsync();
-      recordingRef.current = recording;
-      setIsRecording(true);
-    } catch (err) {
-      console.error('Failed to start recording:', err);
-      Alert.alert('Error', 'Failed to start voice recording');
-    }
-  };
-
-  const stopVoiceRecording = async () => {
-    if (!recordingRef.current) return;
-
-    try {
-      setIsRecording(false);
-      setIsProcessing(true);
-
-      await recordingRef.current.stopAndUnloadAsync();
-      const uri = recordingRef.current.getURI();
-      recordingRef.current = null;
-
-      if (uri && Platform.OS !== 'web') {
-        await processVoiceInput(uri);
-      }
-    } catch (err) {
-      console.error('Failed to stop recording:', err);
-      setIsProcessing(false);
-    }
-  };
-
-  const processVoiceInput = async (audioUri: string) => {
-    try {
-      const response = await fetch(audioUri);
-      const blob = await response.blob();
-      const reader = new FileReader();
-
-      reader.onloadend = async () => {
-        const base64Audio = (reader.result as string).split(',')[1];
-
-        const apiResponse = await fetch(
-          `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/voice-chat`,
-          {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              audio_base64: base64Audio,
-              conversation_history: [],
-              user_context: {
-                excursion_title: title,
-                current_step: currentStepIndex + 1,
-                total_steps: excursion?.route_data?.steps?.length || 0,
-              },
-            }),
-          }
-        );
-
-        if (apiResponse.ok) {
-          const data = await apiResponse.json();
-          if (data.response_text) {
-            setAiResponse(data.response_text);
-          }
-
-          if (data.response_audio_base64) {
-            await playAudioResponse(data.response_audio_base64);
-          }
-        }
-
-        setIsProcessing(false);
-      };
-
-      reader.readAsDataURL(blob);
-    } catch (err) {
-      console.error('Error processing voice input:', err);
-      setIsProcessing(false);
-    }
-  };
-
-  const playAudioResponse = async (base64Audio: string) => {
-    try {
-      const { sound } = await Audio.Sound.createAsync(
-        { uri: `data:audio/mp3;base64,${base64Audio}` },
-        { shouldPlay: true }
-      );
-
-      await sound.playAsync();
-
-      sound.setOnPlaybackStatusUpdate((status) => {
-        if (status.isLoaded && status.didJustFinish) {
-          sound.unloadAsync();
-        }
-      });
-    } catch (err) {
-      console.error('Error playing audio:', err);
-    }
-  };
-
   const handleEndExcursion = () => {
-    Alert.alert(
-      'End Excursion?',
-      'Are you sure you want to end this excursion?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'End',
-          style: 'destructive',
-          onPress: async () => {
-            stopLocationTracking();
-            await supabase
-              .from('excursions')
-              .update({ completed_at: new Date().toISOString() })
-              .eq('id', id);
-            router.back();
-          },
-        },
-      ]
-    );
+    stopLocationTracking();
+    setShowFeedback(true);
+  };
+
+  const handleFeedbackComplete = () => {
+    setShowFeedback(false);
+    router.back();
   };
 
   if (loading) {
@@ -424,6 +275,29 @@ export default function ActiveExcursionScreen() {
         </View>
       )}
 
+      {guidingSession && (
+        <View style={styles.chatCard}>
+          <TouchableOpacity
+            style={styles.chatToggleButton}
+            onPress={() => setShowChat(!showChat)}
+            activeOpacity={0.7}
+          >
+            <MessageCircle size={18} color="#4A7C2E" />
+            <Text style={styles.chatToggleText}>
+              {showChat ? 'Hide Chat' : 'Chat with Guide'}
+            </Text>
+          </TouchableOpacity>
+
+          {showChat && (
+            <EmbeddedChat
+              sessionId={guidingSession.id}
+              assistantType="health_coach"
+              placeholder="Ask your guide a question..."
+            />
+          )}
+        </View>
+      )}
+
       <View style={styles.controls}>
         <TouchableOpacity
           style={styles.pauseButton}
@@ -431,20 +305,15 @@ export default function ActiveExcursionScreen() {
         >
           <Text style={styles.pauseButtonText}>{isPaused ? 'Resume' : 'Pause'}</Text>
         </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.voiceButton, (isRecording || isProcessing) && styles.voiceButtonActive]}
-          onPressIn={startVoiceRecording}
-          onPressOut={stopVoiceRecording}
-          disabled={isProcessing}
-        >
-          {isProcessing ? (
-            <ActivityIndicator size="large" color="#FFFFFF" />
-          ) : (
-            <Mic size={32} color="#FFFFFF" />
-          )}
-        </TouchableOpacity>
       </View>
+
+      <Modal visible={showFeedback} transparent animationType="fade">
+        <ExcursionFeedback
+          excursionId={id}
+          excursionTitle={title}
+          onComplete={handleFeedbackComplete}
+        />
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -560,6 +429,31 @@ const styles = StyleSheet.create({
     color: '#2D3E1F',
     lineHeight: 22,
   },
+  chatCard: {
+    backgroundColor: '#FFFFFF',
+    marginHorizontal: 20,
+    marginTop: 12,
+    borderRadius: 12,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  chatToggleButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    padding: 14,
+    backgroundColor: '#F5F8F3',
+  },
+  chatToggleText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#4A7C2E',
+  },
   controls: {
     position: 'absolute',
     bottom: 40,
@@ -568,13 +462,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    gap: 20,
     paddingHorizontal: 20,
   },
   pauseButton: {
     backgroundColor: '#FFFFFF',
-    paddingHorizontal: 24,
-    paddingVertical: 14,
+    paddingHorizontal: 32,
+    paddingVertical: 16,
     borderRadius: 12,
     borderWidth: 2,
     borderColor: '#4A7C2E',
@@ -583,22 +476,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: '#4A7C2E',
-  },
-  voiceButton: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: '#4A7C2E',
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  voiceButtonActive: {
-    backgroundColor: '#C00',
   },
   centered: {
     flex: 1,

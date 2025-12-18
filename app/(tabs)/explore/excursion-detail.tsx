@@ -3,9 +3,11 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, Linking
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
 import { supabase } from '@/services/supabase';
-import { ArrowLeft, MapPin, Clock, Navigation as NavigationIcon } from 'lucide-react-native';
+import { ArrowLeft, MapPin, Clock, Navigation as NavigationIcon, MessageCircle } from 'lucide-react-native';
 import { LoadingScreen } from '@/components/loading-screen';
 import MapScreen from '@/components/map-screen';
+import { EmbeddedChat } from '@/components/embedded-chat';
+import { createSession, getSession, type ChatSession } from '@/services/chat';
 
 interface Excursion {
   id: string;
@@ -24,10 +26,11 @@ interface Excursion {
 }
 
 export default function ExcursionDetailScreen() {
-  const { id, userLat, userLng } = useLocalSearchParams<{
+  const { id, userLat, userLng, sessionId: paramSessionId } = useLocalSearchParams<{
     id: string;
     userLat: string;
     userLng: string;
+    sessionId?: string;
   }>();
   const [excursion, setExcursion] = useState<Excursion | null>(null);
   const [loading, setLoading] = useState(true);
@@ -35,10 +38,29 @@ export default function ExcursionDetailScreen() {
   const [stepsExpanded, setStepsExpanded] = useState(false);
   const [checklistExpanded, setChecklistExpanded] = useState(false);
   const [travelDuration, setTravelDuration] = useState<number | null>(null);
+  const [chatSession, setChatSession] = useState<ChatSession | null>(null);
+  const [showChat, setShowChat] = useState(false);
 
   useEffect(() => {
     loadExcursion();
+    initializeChatSession();
   }, [id]);
+
+  const initializeChatSession = async () => {
+    if (paramSessionId) {
+      const session = await getSession(paramSessionId);
+      if (session) {
+        setChatSession(session);
+        setShowChat(true);
+        return;
+      }
+    }
+
+    const session = await createSession('excursion_creator', 'excursion_creation', id);
+    if (session) {
+      setChatSession(session);
+    }
+  };
 
   const loadExcursion = async () => {
     try {
@@ -185,6 +207,10 @@ export default function ExcursionDetailScreen() {
     'First aid basics',
   ];
 
+  const handleExcursionUpdate = async () => {
+    await loadExcursion();
+  };
+
   const openDirections = async () => {
     const targetLocation = destinationPoint || excursionLocation;
     if (!targetLocation) {
@@ -246,6 +272,31 @@ export default function ExcursionDetailScreen() {
                 } : undefined}
               />
             </View>
+
+            {chatSession && (
+              <View style={styles.chatCard}>
+                <TouchableOpacity
+                  style={styles.chatToggleButton}
+                  onPress={() => setShowChat(!showChat)}
+                  activeOpacity={0.7}
+                >
+                  <MessageCircle size={20} color="#4A7C2E" />
+                  <Text style={styles.chatToggleText}>
+                    {showChat ? 'Hide Chat' : 'Refine This Excursion'}
+                  </Text>
+                </TouchableOpacity>
+
+                {showChat && (
+                  <EmbeddedChat
+                    sessionId={chatSession.id}
+                    assistantType="excursion_creator"
+                    placeholder="Ask questions or request changes..."
+                    onExcursionUpdate={handleExcursionUpdate}
+                  />
+                )}
+              </View>
+            )}
+
             <TouchableOpacity style={styles.directionsButton} onPress={openDirections}>
               <NavigationIcon size={20} color="#FFFFFF" />
               <Text style={styles.directionsButtonText}>Get Directions</Text>
@@ -650,6 +701,31 @@ const styles = StyleSheet.create({
   secondaryButtonText: {
     fontSize: 16,
     fontWeight: '700',
+    color: '#4A7C2E',
+  },
+  chatCard: {
+    backgroundColor: '#FFFFFF',
+    marginHorizontal: 20,
+    marginTop: 16,
+    borderRadius: 12,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  chatToggleButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    padding: 16,
+    backgroundColor: '#F5F8F3',
+  },
+  chatToggleText: {
+    fontSize: 16,
+    fontWeight: '600',
     color: '#4A7C2E',
   },
 });
