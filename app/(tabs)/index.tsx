@@ -128,7 +128,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F5F8F3',
   },
   scrollContent: {
-    paddingBottom: 20,
+    paddingBottom: 48,
   },
   heroSection: {
     alignItems: 'center',
@@ -163,7 +163,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginHorizontal: 24,
     marginTop: -8,
-    marginBottom: 36,
+    marginBottom: 48,
   },
   loadingContainer: {
     marginHorizontal: 20,
@@ -175,7 +175,7 @@ const styles = StyleSheet.create({
   },
   photoCard: {
     marginHorizontal: 20,
-    marginBottom: 12,
+    marginBottom: 28,
     borderRadius: 16,
     overflow: 'hidden',
     backgroundColor: '#FFFFFF',
