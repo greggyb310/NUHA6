@@ -231,7 +231,7 @@ export default function ConversationScreen() {
           contentContainerStyle={styles.messagesContent}
           onContentSizeChange={scrollToBottom}
         >
-          {messages.map((message) => (
+          {messages.slice(1).map((message) => (
             <View
               key={message.id}
               style={[
