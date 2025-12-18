@@ -140,6 +140,15 @@ export default function CreateScreen() {
     loadWeather();
   }, []);
 
+  useEffect(() => {
+    if (params.autoCreate === 'true' && location && !weatherLoading && !loading && parsedIntent) {
+      console.log('Auto-creating excursion from conversation');
+      setTimeout(() => {
+        handleCreateExcursion();
+      }, 500);
+    }
+  }, [params.autoCreate, location, weatherLoading, loading, parsedIntent]);
+
   const loadUserPreferences = async () => {
     if (params.intentData) {
       return;

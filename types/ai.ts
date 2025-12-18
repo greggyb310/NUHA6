@@ -1,6 +1,7 @@
 export type AiAction =
   | 'health_coach_message'
-  | 'excursion_plan';
+  | 'excursion_plan'
+  | 'excursion_creator_message';
 
 export type ChatMessage = {
   role: 'user' | 'assistant' | 'system';

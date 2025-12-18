@@ -133,8 +133,9 @@ export async function sendMessage(
   sessionId: string,
   userMessage: string,
   conversationHistory: ChatMessage[],
+  assistantType: string = 'health_coach',
   onProgress?: (partialReply: string) => void
-): Promise<{ reply: string; error?: string }> {
+): Promise<{ reply: string; readyToCreate?: boolean; error?: string }> {
   await saveMessage(sessionId, 'user', userMessage);
 
   const historyForApi: ChatMessage[] = conversationHistory.map((msg) => ({
@@ -158,8 +159,10 @@ export async function sendMessage(
     }
   }
 
-  const response = await aiRun<HealthCoachResult>({
-    action: 'health_coach_message',
+  const action = assistantType === 'excursion_creator' ? 'excursion_creator_message' : 'health_coach_message';
+
+  const response = await aiRun<HealthCoachResult & { readyToCreate?: boolean }>({
+    action,
     input: { message: userMessage },
     context: userContext,
     conversation_history: historyForApi,
@@ -173,9 +176,10 @@ export async function sendMessage(
   }
 
   const assistantReply = response.result.reply;
+  const readyToCreate = response.result.readyToCreate;
   await saveMessage(sessionId, 'assistant', assistantReply);
 
-  return { reply: assistantReply };
+  return { reply: assistantReply, readyToCreate };
 }
 
 export async function sendVoiceMessage(

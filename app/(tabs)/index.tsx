@@ -86,9 +86,9 @@ export default function HomeScreen() {
       const parsedIntent = parseIntent(message.trim());
       console.log('Home screen - Parsed intent:', parsedIntent);
       const intentData = JSON.stringify(parsedIntent);
-      console.log('Home screen - Navigating with intentData:', intentData);
+      console.log('Home screen - Navigating to conversation with intentData:', intentData);
       router.push({
-        pathname: '/(tabs)/chat',
+        pathname: '/conversation',
         params: { intentData },
       });
     }

@@ -6,7 +6,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
 };
 
-type AiAction = 'health_coach_message' | 'excursion_plan';
+type AiAction = 'health_coach_message' | 'excursion_plan' | 'excursion_creator_message';
 
 interface ChatMessage {
   role: 'user' | 'assistant' | 'system';
@@ -172,7 +172,7 @@ const openaiProvider: Provider = {
       messages.push(...req.conversation_history);
     }
 
-    const userMessage = req.action === 'health_coach_message'
+    const userMessage = (req.action === 'health_coach_message' || req.action === 'excursion_creator_message')
       ? (req.input.message as string) || ''
       : JSON.stringify({ input: req.input, context: req.context || {} });
 
@@ -248,6 +248,55 @@ function getSystemPrompt(action: AiAction, context?: Record<string, unknown>): s
     case 'health_coach_message':
       return NATUREUP_SYSTEM_PROMPT + userPrefsSection;
 
+    case 'excursion_creator_message':
+      return `You are an AI assistant helping users create personalized nature therapy excursions through conversation.
+
+Your role:
+- Understand the user's initial request and what they want to do
+- Ask clarifying questions to gather missing information
+- Keep responses brief and conversational (2-3 sentences max)
+- Once you have enough information, summarize and ask for confirmation
+- Guide the user through the creation process naturally${userPrefsSection}
+
+Required information to create an excursion:
+1. Duration (how long the excursion should be)
+2. Activity type (walking, hiking, meditation, etc.)
+3. Therapeutic goals (stress relief, mood enhancement, etc.) - OPTIONAL
+4. Difficulty preference (easy, medium, hard) - OPTIONAL
+5. Location preference (nearby, specific distance) - will use current location
+
+CONVERSATION FLOW:
+1. GREETING: Acknowledge their request warmly and briefly mention what you understood
+2. CLARIFY: Ask about missing required information ONE AT A TIME
+3. CONFIRM: Once you have duration and activity, summarize and ask if they're ready to create it
+4. CREATE: When user confirms, respond with: "Perfect! Creating your excursion now..."
+
+RESPONSE RULES:
+- Ask only ONE question at a time
+- Be warm but concise
+- Use natural, conversational language
+- Don't overwhelm with options
+- If they mention therapeutic goals or difficulty, great! If not, that's okay too
+
+CONFIRMATION SIGNAL:
+When the user is ready to create the excursion, respond with the EXACT phrase:
+"READY_TO_CREATE"
+
+This signals the app to proceed with excursion generation.
+
+OUTPUT FORMAT:
+Always respond with valid JSON in this exact format:
+{
+  "reply": "Your response here",
+  "readyToCreate": false
+}
+
+When user confirms and you're ready to create, set readyToCreate to true:
+{
+  "reply": "Perfect! Creating your excursion now...",
+  "readyToCreate": true
+}`;
+
     case 'excursion_plan':
       return `You are an AI assistant that creates personalized nature therapy excursions.
 
@@ -316,7 +365,7 @@ const geminiProvider: Provider = {
       }
     }
 
-    const userMessage = req.action === 'health_coach_message'
+    const userMessage = (req.action === 'health_coach_message' || req.action === 'excursion_creator_message')
       ? (req.input.message as string) || ''
       : JSON.stringify({ input: req.input, context: req.context || {} });
 

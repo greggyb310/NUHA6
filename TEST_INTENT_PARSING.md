@@ -28,24 +28,30 @@ The home screen was NOT parsing user input or passing intent data to the chat sc
 ### Testing in Browser Console
 Open browser DevTools and look for these console messages:
 1. `Home screen - Parsed intent:` shows what was parsed
-2. `Home screen - Navigating with intentData:` shows JSON being passed
-3. `Received params:` shows what chat screen received
-4. `Applying intent to form:` shows the intent object
-5. `Setting duration to:` shows duration value being applied
+2. `Home screen - Navigating to conversation with intentData:` shows navigation
+3. `Received params:` shows what conversation screen received
+4. `Applying intent to form:` (only when auto-creating)
+
+## New Conversational Flow
+
+When users type in the home screen input, they now enter a **conversational interface** instead of a form. The AI assistant will:
+1. Acknowledge their request
+2. Ask clarifying questions for missing info (one at a time)
+3. Summarize and ask for confirmation
+4. Auto-create the excursion when confirmed
 
 ## Test Cases
 
 ### Test 1: "1 hour hike near here"
 **Expected Flow:**
 1. Type in home screen input: `1 hour hike near here`
-2. Should route to Create Excursion (not chat)
-3. Form should show:
-   - Duration: 1 hour (60 min)
-   - Activity: "Hiking" selected
-   - Banner: "Using your request: 60 min • Hiking • near here"
-4. Places search limited to 3 miles, max 10 results
-5. Create excursion → AI should acknowledge "1-hour hiking excursion near you"
-6. Detail page shows "YOUR REQUEST" card with: "60 min • Hiking • near here"
+2. **Navigates to conversation screen** with green banner showing "Based on: 1 hour hike near here"
+3. AI greets: *"I'd love to help you plan a 1-hour hiking excursion near your location! To make this perfect for you, what would you like to focus on during this hike? For example, stress relief, mood enhancement, or just enjoying nature?"*
+4. User responds: "stress relief"
+5. AI confirms: *"Perfect! I'll create a 1-hour hiking excursion focused on stress relief near your current location. Ready to create it?"*
+6. User responds: "yes" or "sounds good"
+7. **Auto-navigates to form** which immediately creates the excursion
+8. Shows loading screen → excursion created → navigates to detail page
 
 ---
 
