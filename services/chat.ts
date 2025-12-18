@@ -173,9 +173,9 @@ export async function sendMessage(
     const hasExcursionIntent = detectExcursionIntent(userMessage);
 
     if (hasExcursionIntent) {
-      const transitionSuccess = await transitionToExcursionPlanning(sessionId);
+      const transitionResult = await transitionToExcursionPlanning(sessionId);
 
-      if (transitionSuccess) {
+      if (transitionResult.success) {
         const refetchResult = await supabase
           .from('chat_sessions')
           .select('assistant_type, phase, conversation_metadata')
@@ -185,6 +185,8 @@ export async function sendMessage(
         if (refetchResult.data) {
           sessionRow = refetchResult.data;
         }
+      } else {
+        console.error('Phase transition failed:', transitionResult.error);
       }
     }
   }

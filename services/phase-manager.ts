@@ -1,6 +1,12 @@
 import { supabase } from './supabase';
 import type { ConversationPhase } from './chat';
 
+export interface PhaseTransitionResult {
+  success: boolean;
+  error?: string;
+  errorCode?: string;
+}
+
 export function getAssistantForPhase(phase: ConversationPhase): 'health_coach' | 'excursion_creator' {
   switch (phase) {
     case 'excursion_planning':
@@ -26,7 +32,7 @@ export function canTransition(fromPhase: ConversationPhase, toPhase: Conversatio
   return validTransitions[fromPhase]?.includes(toPhase) || false;
 }
 
-export async function transitionToExcursionPlanning(sessionId: string): Promise<boolean> {
+export async function transitionToExcursionPlanning(sessionId: string): Promise<PhaseTransitionResult> {
   const { error } = await supabase
     .from('chat_sessions')
     .update({
@@ -43,11 +49,23 @@ export async function transitionToExcursionPlanning(sessionId: string): Promise<
     .eq('id', sessionId);
 
   if (error) {
-    console.error('Error transitioning to excursion_planning:', error);
-    return false;
+    const isConstraintViolation = error.code === '23514' || error.message?.includes('violates check constraint');
+    console.error('Error transitioning to excursion_planning:', {
+      code: error.code,
+      message: error.message,
+      details: error.details,
+      hint: error.hint,
+    });
+    return {
+      success: false,
+      error: isConstraintViolation
+        ? 'Database schema mismatch: phase value not allowed'
+        : error.message,
+      errorCode: error.code,
+    };
   }
 
-  return true;
+  return { success: true };
 }
 
 export async function transitionToExcursionCreation(
