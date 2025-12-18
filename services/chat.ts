@@ -133,11 +133,26 @@ export async function sendMessage(
   sessionId: string,
   userMessage: string,
   conversationHistory: ChatMessage[],
-  assistantType: string = 'health_coach',
+  assistantType?: string,
   onProgress?: (partialReply: string) => void,
   contextMetadata?: Record<string, unknown>
 ): Promise<{ reply: string; readyToCreate?: boolean; error?: string }> {
   await saveMessage(sessionId, 'user', userMessage);
+
+  // If assistantType wasn't provided, infer it from the session record
+  if (!assistantType) {
+    const { data: sessionRow, error: sessionErr } = await supabase
+      .from('chat_sessions')
+      .select('assistant_type')
+      .eq('id', sessionId)
+      .single();
+
+    if (!sessionErr && sessionRow?.assistant_type) {
+      assistantType = sessionRow.assistant_type;
+    } else {
+      assistantType = 'health_coach';
+    }
+  }
 
   const historyForApi: ChatMessage[] = conversationHistory.map((msg) => ({
     role: msg.role,

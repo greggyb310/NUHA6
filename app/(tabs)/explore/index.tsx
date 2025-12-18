@@ -175,7 +175,7 @@ export default function ExploreScreen() {
         content: msg.content,
       }));
 
-      const result = await sendMessage(sessionId, userMessageText, conversationHistory);
+      const result = await sendMessage(sessionId, userMessageText, conversationHistory, 'excursion_creator');
 
       if (result.error) {
         setError(result.error);
