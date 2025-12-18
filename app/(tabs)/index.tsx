@@ -95,7 +95,7 @@ export default function HomeScreen() {
         resizeMode="cover"
       >
         <LinearGradient
-          colors={['rgba(0,0,0,0.3)', 'rgba(0,0,0,0.5)', 'rgba(0,0,0,0.7)']}
+          colors={['rgba(0,0,0,0.7)', 'rgba(0,0,0,0.3)', 'rgba(0,0,0,0.7)']}
           style={styles.gradient}
         >
           <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
