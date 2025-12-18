@@ -35,6 +35,7 @@ export default function ExcursionDetailScreen() {
   const [stepsExpanded, setStepsExpanded] = useState(false);
   const [contentReady, setContentReady] = useState(false);
   const [routeMode, setRouteMode] = useState<'foot' | 'driving'>('foot');
+  const [travelDuration, setTravelDuration] = useState<number | null>(null);
 
   useEffect(() => {
     loadExcursion();
@@ -73,6 +74,49 @@ export default function ExcursionDetailScreen() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    const fetchTravelTime = async () => {
+      if (!userLat || !userLng || !excursion) return;
+
+      const startLocation = excursion.route_data?.start_location;
+      const waypoints = excursion.route_data?.waypoints || [];
+      const excursionLocation = startLocation || waypoints[0];
+
+      if (!excursionLocation?.lat || !excursionLocation?.lng) return;
+
+      try {
+        const response = await fetch(
+          `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/calculate-route`,
+          {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              waypoints: [
+                { lat: parseFloat(userLat), lng: parseFloat(userLng) },
+                { lat: excursionLocation.lat, lng: excursionLocation.lng }
+              ],
+              mode: routeMode,
+            }),
+          }
+        );
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.duration) {
+            setTravelDuration(Math.round(data.duration / 60));
+          }
+        }
+      } catch (err) {
+        console.error('Error calculating travel time:', err);
+      }
+    };
+
+    fetchTravelTime();
+  }, [excursion, userLat, userLng, routeMode]);
 
   if (error || (!excursion && !loading)) {
     return (
@@ -133,6 +177,10 @@ export default function ExcursionDetailScreen() {
     return sentences[0] ? sentences[0].trim() + '.' : text;
   };
 
+  const cleanTitle = (title: string): string => {
+    return title.replace(/\s*\(\d+\s*min\)\s*$/i, '').trim();
+  };
+
   const steps = excursion.route_data?.steps || [];
   const previewSteps = stepsExpanded ? steps : steps.slice(0, 3);
 
@@ -174,7 +222,7 @@ export default function ExcursionDetailScreen() {
           <ArrowLeft size={24} color="#2D3E1F" />
         </TouchableOpacity>
         <Text style={styles.headerTitle} numberOfLines={1}>
-          {excursion.title}
+          {cleanTitle(excursion.title)}
         </Text>
       </View>
 
@@ -221,11 +269,19 @@ export default function ExcursionDetailScreen() {
         )}
 
         <View style={styles.metricsCard}>
+          {travelDuration && (
+            <View style={styles.metricItem}>
+              <NavigationIcon size={20} color="#5A6C4A" />
+              <Text style={styles.metricValue}>{travelDuration}</Text>
+              <Text style={styles.metricLabel}>min travel</Text>
+            </View>
+          )}
+
           {excursion.duration_minutes && (
             <View style={styles.metricItem}>
               <Clock size={20} color="#5A6C4A" />
               <Text style={styles.metricValue}>{excursion.duration_minutes}</Text>
-              <Text style={styles.metricLabel}>min</Text>
+              <Text style={styles.metricLabel}>min activity</Text>
             </View>
           )}
 
@@ -246,7 +302,7 @@ export default function ExcursionDetailScreen() {
 
         {excursion.description && (
           <View style={styles.descriptionCard}>
-            <Text style={styles.excursionTitle}>{excursion.title}</Text>
+            <Text style={styles.excursionTitle}>{cleanTitle(excursion.title)}</Text>
             <Text style={styles.excursionDescription}>
               {getFirstSentence(excursion.description)}
             </Text>
