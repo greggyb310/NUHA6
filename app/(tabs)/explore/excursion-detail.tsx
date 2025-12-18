@@ -34,7 +34,6 @@ export default function ExcursionDetailScreen() {
   const [error, setError] = useState<string | null>(null);
   const [stepsExpanded, setStepsExpanded] = useState(false);
   const [contentReady, setContentReady] = useState(false);
-  const [routeMode, setRouteMode] = useState<'foot' | 'driving'>('foot');
   const [travelDuration, setTravelDuration] = useState<number | null>(null);
 
   useEffect(() => {
@@ -99,7 +98,7 @@ export default function ExcursionDetailScreen() {
                 { lat: parseFloat(userLat), lng: parseFloat(userLng) },
                 { lat: excursionLocation.lat, lng: excursionLocation.lng }
               ],
-              mode: routeMode,
+              mode: 'foot',
             }),
           }
         );
@@ -116,7 +115,7 @@ export default function ExcursionDetailScreen() {
     };
 
     fetchTravelTime();
-  }, [excursion, userLat, userLng, routeMode]);
+  }, [excursion, userLat, userLng]);
 
   if (error || (!excursion && !loading)) {
     return (
@@ -229,42 +228,26 @@ export default function ExcursionDetailScreen() {
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         {excursionLocation && (
           <>
-            <View style={styles.routeModeToggle}>
-              <TouchableOpacity
-                style={[styles.routeModeButton, routeMode === 'foot' && styles.routeModeButtonActive]}
-                onPress={() => setRouteMode('foot')}
-              >
-                <Text style={[styles.routeModeButtonText, routeMode === 'foot' && styles.routeModeButtonTextActive]}>
-                  Walking
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.routeModeButton, routeMode === 'driving' && styles.routeModeButtonActive]}
-                onPress={() => setRouteMode('driving')}
-              >
-                <Text style={[styles.routeModeButtonText, routeMode === 'driving' && styles.routeModeButtonTextActive]}>
-                  Driving
-                </Text>
-              </TouchableOpacity>
-            </View>
             <View style={styles.mapCard}>
-            <MapScreen
-              initialRegion={{
-                latitude: excursionLocation.lat,
-                longitude: excursionLocation.lng,
-                latitudeDelta: 0.04,
-                longitudeDelta: 0.04,
-              }}
-              showNearbyPlaces={false}
-              destination={destinationPoint ? {
-                latitude: destinationPoint.lat,
-                longitude: destinationPoint.lng,
-                title: destination?.name || excursion.title,
-              } : undefined}
-              routeWaypoints={waypoints}
-              routeMode={routeMode}
-            />
-          </View>
+              <MapScreen
+                initialRegion={{
+                  latitude: excursionLocation.lat,
+                  longitude: excursionLocation.lng,
+                  latitudeDelta: 0.04,
+                  longitudeDelta: 0.04,
+                }}
+                showNearbyPlaces={false}
+                destination={destinationPoint ? {
+                  latitude: destinationPoint.lat,
+                  longitude: destinationPoint.lng,
+                  title: destination?.name || cleanTitle(excursion.title),
+                } : undefined}
+              />
+            </View>
+            <TouchableOpacity style={styles.directionsButton} onPress={openDirections}>
+              <NavigationIcon size={20} color="#FFFFFF" />
+              <Text style={styles.directionsButtonText}>Get Directions</Text>
+            </TouchableOpacity>
           </>
         )}
 
@@ -565,13 +548,18 @@ const styles = StyleSheet.create({
   directionsButton: {
     backgroundColor: '#4A7C2E',
     marginHorizontal: 20,
-    marginTop: 24,
+    marginTop: 16,
     padding: 16,
     borderRadius: 12,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   directionsButtonText: {
     fontSize: 16,
@@ -592,33 +580,5 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: '#4A7C2E',
-  },
-  routeModeToggle: {
-    flexDirection: 'row',
-    gap: 12,
-    marginHorizontal: 20,
-    marginBottom: 16,
-  },
-  routeModeButton: {
-    flex: 1,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    backgroundColor: '#F5F8F3',
-    borderWidth: 2,
-    borderColor: '#E5E7EB',
-    alignItems: 'center',
-  },
-  routeModeButtonActive: {
-    backgroundColor: '#4A7C2E',
-    borderColor: '#4A7C2E',
-  },
-  routeModeButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#5A6C4A',
-  },
-  routeModeButtonTextActive: {
-    color: '#FFFFFF',
   },
 });
