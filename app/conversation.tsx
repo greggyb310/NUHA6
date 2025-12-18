@@ -13,7 +13,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Send, X, ArrowRight } from 'lucide-react-native';
-import { getOrCreateSession, getSessionMessages, sendMessage, type StoredMessage } from '@/services/chat';
+import { createSession, getSessionMessages, sendMessage, saveMessage, type StoredMessage } from '@/services/chat';
 import type { ChatMessage } from '@/types/ai';
 import type { ParsedIntent } from '@/types/intent';
 
@@ -35,7 +35,7 @@ export default function ConversationScreen() {
 
   const initializeConversation = async () => {
     try {
-      const session = await getOrCreateSession('excursion_creator');
+      const session = await createSession('excursion_creator');
       if (!session) {
         console.error('Failed to create session');
         setError('Unable to start conversation. Please try again.');
@@ -45,18 +45,12 @@ export default function ConversationScreen() {
 
       setSessionId(session.id);
 
-      const existingMessages = await getSessionMessages(session.id);
-      setMessages(existingMessages);
-
       if (params.intentData) {
         const intent = JSON.parse(params.intentData as string) as ParsedIntent;
         setParsedIntent(intent);
-
-        if (existingMessages.length === 0) {
-          await sendInitialMessage(session.id, intent.rawText, intent);
-        }
-      } else if (existingMessages.length === 0) {
-        await sendInitialMessage(session.id, 'I want to create a nature excursion');
+        await sendInitialMessage(session.id, intent.rawText, intent);
+      } else {
+        await sendAIGreeting(session.id);
       }
 
       setLoading(false);
@@ -67,10 +61,30 @@ export default function ConversationScreen() {
     }
   };
 
+  const sendAIGreeting = async (sessionId: string) => {
+    setSending(true);
+
+    const greetingMessage = "Hi there! I'm here to help you create a personalized nature excursion. What kind of outdoor experience are you in the mood for today?";
+    await saveMessage(sessionId, 'assistant', greetingMessage);
+
+    const updatedMessages = await getSessionMessages(sessionId);
+    setMessages(updatedMessages);
+    scrollToBottom();
+
+    setSending(false);
+  };
+
   const sendInitialMessage = async (sessionId: string, message: string, intent?: ParsedIntent) => {
     setSending(true);
 
+    const greetingMessage = "Hi there! I'm here to help you create a personalized nature excursion.";
+    await saveMessage(sessionId, 'assistant', greetingMessage);
+
     const conversationHistory: ChatMessage[] = [
+      {
+        role: 'assistant',
+        content: greetingMessage,
+      },
       {
         role: 'user',
         content: message,
