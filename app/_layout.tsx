@@ -32,6 +32,7 @@ export default function RootLayout() {
     const inOnboarding = segments[0] === 'onboarding';
     const inSignIn = segments[0] === 'sign-in';
     const inSignUp = segments[0] === 'sign-up';
+    const inConversation = segments[0] === 'conversation';
 
     console.log('Navigation check:', {
       isAuthenticated,
@@ -48,6 +49,7 @@ export default function RootLayout() {
       !inOnboarding &&
       !inSignIn &&
       !inSignUp &&
+      !inConversation &&
       segments.length > 0
     ) {
       console.log('Redirecting to tabs (authenticated but not in allowed route)');
@@ -71,6 +73,7 @@ export default function RootLayout() {
         <Stack.Screen name="sign-in" />
         <Stack.Screen name="sign-up" />
         <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="conversation" />
         <Stack.Screen name="+not-found" />
       </Stack>
       <StatusBar style="auto" />

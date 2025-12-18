@@ -27,6 +27,7 @@ export default function ConversationScreen() {
   const scrollViewRef = useRef<ScrollView>(null);
   const [parsedIntent, setParsedIntent] = useState<ParsedIntent | null>(null);
   const [readyToCreate, setReadyToCreate] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     initializeConversation();
@@ -37,6 +38,7 @@ export default function ConversationScreen() {
       const session = await getOrCreateSession('excursion_creator');
       if (!session) {
         console.error('Failed to create session');
+        setError('Unable to start conversation. Please try again.');
         setLoading(false);
         return;
       }
@@ -61,6 +63,7 @@ export default function ConversationScreen() {
       setLoading(false);
     } catch (error) {
       console.error('Error initializing conversation:', error);
+      setError('Something went wrong. Please try again.');
       setLoading(false);
     }
   };
@@ -185,6 +188,32 @@ export default function ConversationScreen() {
     );
   }
 
+  if (error) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Create Excursion</Text>
+          <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
+            <X size={24} color="#2D3E1F" />
+          </TouchableOpacity>
+        </View>
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>{error}</Text>
+          <TouchableOpacity
+            style={styles.retryButton}
+            onPress={() => {
+              setError(null);
+              setLoading(true);
+              initializeConversation();
+            }}
+          >
+            <Text style={styles.retryButtonText}>Try Again</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
@@ -291,6 +320,30 @@ const styles = StyleSheet.create({
   loadingText: {
     fontSize: 16,
     color: '#5A6C4A',
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 32,
+    gap: 24,
+  },
+  errorText: {
+    fontSize: 16,
+    color: '#DC2626',
+    textAlign: 'center',
+    lineHeight: 24,
+  },
+  retryButton: {
+    backgroundColor: '#4A7C2E',
+    paddingVertical: 12,
+    paddingHorizontal: 32,
+    borderRadius: 24,
+  },
+  retryButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
   header: {
     flexDirection: 'row',

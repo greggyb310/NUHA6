@@ -87,6 +87,9 @@ export default function HomeScreen() {
       console.log('Home screen - Parsed intent:', parsedIntent);
       const intentData = JSON.stringify(parsedIntent);
       console.log('Home screen - Navigating to conversation with intentData:', intentData);
+
+      setMessage('');
+
       router.push({
         pathname: '/conversation',
         params: { intentData },
@@ -144,12 +147,17 @@ export default function HomeScreen() {
                   onChangeText={setMessage}
                   onSubmitEditing={handleSendMessage}
                   returnKeyType="send"
+                  multiline
+                  numberOfLines={3}
+                  maxLength={200}
+                  textAlignVertical="center"
                 />
                 <TouchableOpacity
                   style={styles.sendButton}
                   onPress={handleSendMessage}
+                  disabled={!message.trim()}
                 >
-                  <Send size={20} color="#FFFFFF" />
+                  <Send size={20} color={message.trim() ? "#FFFFFF" : "rgba(255, 255, 255, 0.5)"} />
                 </TouchableOpacity>
               </View>
 
@@ -269,13 +277,13 @@ const styles = StyleSheet.create({
   },
   chatInputContainer: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-end',
     backgroundColor: 'rgba(255, 255, 255, 0.15)',
     borderRadius: 28,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.3)',
     paddingHorizontal: 20,
-    paddingVertical: 12,
+    paddingVertical: 8,
     gap: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
@@ -288,6 +296,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#FFFFFF',
     fontWeight: '500',
+    minHeight: 40,
+    maxHeight: 100,
+    paddingTop: 10,
+    paddingBottom: 10,
   },
   sendButton: {
     width: 36,
