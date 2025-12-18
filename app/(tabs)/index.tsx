@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ImageBackground, Image, ActivityIndicator, ImageSourcePropType, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ImageBackground, Image, ActivityIndicator, ImageSourcePropType, TouchableOpacity, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { supabase } from '@/services/supabase';
 import { LinearGradient } from 'expo-linear-gradient';
-import { MessageCircle } from 'lucide-react-native';
+import { MessageCircle, Send } from 'lucide-react-native';
 
 const IMAGE_MAP: Record<string, ImageSourcePropType> = {
   'img_1335_medium.jpeg': require('@/assets/images/img_1335_medium.jpeg'),
@@ -38,6 +38,7 @@ export default function HomeScreen() {
   const [photo, setPhoto] = useState<InspirationPhoto | null>(null);
   const [quote, setQuote] = useState<InspirationQuote | null>(null);
   const [loading, setLoading] = useState(true);
+  const [message, setMessage] = useState('');
 
   useEffect(() => {
     fetchInspiration();
@@ -77,8 +78,17 @@ export default function HomeScreen() {
     ? IMAGE_MAP[photo.image_url]
     : require('@/assets/images/img_6096_large_medium.jpeg');
 
+  const handleSendMessage = () => {
+    if (message.trim()) {
+      router.push('/chat');
+    }
+  };
+
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
       <ImageBackground
         source={backgroundImage}
         style={styles.backgroundImage}
@@ -112,17 +122,27 @@ export default function HomeScreen() {
                   )}
                 </View>
               ) : null}
-
-              <TouchableOpacity
-                style={styles.createButton}
-                onPress={() => router.push('/chat')}
-              >
-                <MessageCircle size={24} color="#FFFFFF" />
-                <Text style={styles.createButtonText}>Create Excursion</Text>
-              </TouchableOpacity>
             </View>
 
             <View style={styles.bottomSection}>
+              <View style={styles.chatInputContainer}>
+                <TextInput
+                  style={styles.chatInput}
+                  placeholder="Let's talk ~"
+                  placeholderTextColor="rgba(255, 255, 255, 0.6)"
+                  value={message}
+                  onChangeText={setMessage}
+                  onSubmitEditing={handleSendMessage}
+                  returnKeyType="send"
+                />
+                <TouchableOpacity
+                  style={styles.sendButton}
+                  onPress={handleSendMessage}
+                >
+                  <Send size={20} color="#FFFFFF" />
+                </TouchableOpacity>
+              </View>
+
               {photo?.photographer && (
                 <Text style={styles.photoCredit}>Photo by {photo.photographer}</Text>
               )}
@@ -130,7 +150,7 @@ export default function HomeScreen() {
           </SafeAreaView>
         </LinearGradient>
       </ImageBackground>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -235,7 +255,42 @@ const styles = StyleSheet.create({
   bottomSection: {
     paddingBottom: 12,
     paddingHorizontal: 24,
-    alignItems: 'flex-end',
+    gap: 12,
+  },
+  chatInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    borderRadius: 28,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    gap: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  chatInput: {
+    flex: 1,
+    fontSize: 16,
+    color: '#FFFFFF',
+    fontWeight: '500',
+  },
+  sendButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#4A7C2E',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
   },
   photoCredit: {
     fontSize: 11,
@@ -243,6 +298,7 @@ const styles = StyleSheet.create({
     textShadowColor: 'rgba(0, 0, 0, 0.75)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 2,
+    alignSelf: 'flex-end',
   },
   createButton: {
     flexDirection: 'row',
