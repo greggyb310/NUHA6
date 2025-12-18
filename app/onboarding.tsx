@@ -7,6 +7,7 @@ import { updateUserProfile } from '@/services/user-profile';
 
 const FITNESS_LEVELS = ['Beginner', 'Intermediate', 'Advanced'];
 const MOBILITY_LEVELS = ['Wheelchair', 'Limited', 'Moderate', 'Full'];
+const RISK_TOLERANCE_OPTIONS = ['Low', 'Medium', 'High'];
 
 const ACTIVITY_PREFERENCES = [
   'Walking',
@@ -28,13 +29,26 @@ const THERAPY_PREFERENCES = [
   'Somatic',
 ];
 
+const HEALTH_GOALS = [
+  'Reduce stress',
+  'Improve sleep',
+  'Boost mood',
+  'Increase energy',
+  'Connect with nature',
+  'Build mindfulness',
+  'Get more exercise',
+  'Improve mental clarity',
+];
+
 export default function OnboardingScreen() {
   const router = useRouter();
   const [age, setAge] = useState('');
   const [fitnessLevel, setFitnessLevel] = useState<string | null>(null);
   const [mobilityLevel, setMobilityLevel] = useState<string | null>(null);
+  const [riskTolerance, setRiskTolerance] = useState<string | null>('Medium');
   const [selectedActivities, setSelectedActivities] = useState<string[]>([]);
   const [selectedTherapies, setSelectedTherapies] = useState<string[]>([]);
+  const [selectedGoals, setSelectedGoals] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -52,6 +66,14 @@ export default function OnboardingScreen() {
       setSelectedTherapies(selectedTherapies.filter((t) => t !== therapy));
     } else {
       setSelectedTherapies([...selectedTherapies, therapy]);
+    }
+  };
+
+  const toggleGoal = (goal: string) => {
+    if (selectedGoals.includes(goal)) {
+      setSelectedGoals(selectedGoals.filter((g) => g !== goal));
+    } else {
+      setSelectedGoals([...selectedGoals, goal]);
     }
   };
 
@@ -79,8 +101,10 @@ export default function OnboardingScreen() {
       age: ageNumber,
       fitness_level: fitnessLevel || undefined,
       mobility_level: mobilityLevel || undefined,
+      risk_tolerance: riskTolerance ? riskTolerance.toLowerCase() : undefined,
       activity_preferences: selectedActivities.length > 0 ? selectedActivities : undefined,
       therapy_preferences: selectedTherapies.length > 0 ? selectedTherapies : undefined,
+      health_goals: selectedGoals.length > 0 ? selectedGoals : undefined,
     });
 
     if (!profile) {
@@ -206,6 +230,50 @@ export default function OnboardingScreen() {
                     >
                       <Text style={[styles.chipText, isSelected && styles.chipTextSelected]}>
                         {therapy}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Health Goals (Optional)</Text>
+              <Text style={styles.sectionSubtitle}>What would you like to achieve?</Text>
+              <View style={styles.chipsGrid}>
+                {HEALTH_GOALS.map((goal) => {
+                  const isSelected = selectedGoals.includes(goal);
+                  return (
+                    <TouchableOpacity
+                      key={goal}
+                      style={[styles.chip, isSelected && styles.chipSelected]}
+                      onPress={() => toggleGoal(goal)}
+                      disabled={loading}
+                    >
+                      <Text style={[styles.chipText, isSelected && styles.chipTextSelected]}>
+                        {goal}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Risk Tolerance (Optional)</Text>
+              <Text style={styles.sectionSubtitle}>How adventurous do you want your routes?</Text>
+              <View style={styles.optionsRow}>
+                {RISK_TOLERANCE_OPTIONS.map((level) => {
+                  const isSelected = riskTolerance === level;
+                  return (
+                    <TouchableOpacity
+                      key={level}
+                      style={[styles.optionButton, isSelected && styles.optionButtonSelected]}
+                      onPress={() => setRiskTolerance(level)}
+                      disabled={loading}
+                    >
+                      <Text style={[styles.optionButtonText, isSelected && styles.optionButtonTextSelected]}>
+                        {level}
                       </Text>
                     </TouchableOpacity>
                   );

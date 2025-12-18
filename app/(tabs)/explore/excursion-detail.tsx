@@ -357,14 +357,6 @@ export default function ExcursionDetailScreen() {
         </View>
 
         <TouchableOpacity
-          style={styles.directionsButton}
-          onPress={openDirections}
-        >
-          <NavigationIcon size={20} color="#FFFFFF" />
-          <Text style={styles.directionsButtonText}>Get Directions</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
           style={styles.startButton}
           onPress={() => router.push({
             pathname: '/(tabs)/explore/active-excursion',

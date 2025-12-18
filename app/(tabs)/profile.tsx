@@ -25,12 +25,42 @@ const HEALTH_GOALS = [
   'Improve mental clarity',
 ];
 
+const FITNESS_LEVELS = ['Beginner', 'Intermediate', 'Advanced'];
+const MOBILITY_LEVELS = ['Wheelchair', 'Limited', 'Moderate', 'Full'];
+const RISK_TOLERANCE_OPTIONS = ['Low', 'Medium', 'High'];
+
+const ACTIVITY_PREFERENCES = [
+  'Walking',
+  'Hiking',
+  'Trail Running',
+  'Road Biking',
+  'Mountain Biking',
+  'Swimming',
+  'Boating',
+];
+
+const THERAPY_PREFERENCES = [
+  'Meditation',
+  'Breath Work',
+  'Sensory Immersion',
+  'Forest Bathing',
+  'Nature Journaling',
+  'Reconnect to Awe',
+  'Somatic',
+];
+
 export default function ProfileScreen() {
   const router = useRouter();
   const [name, setName] = useState('');
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
+  const [age, setAge] = useState('');
+  const [fitnessLevel, setFitnessLevel] = useState<string | null>(null);
+  const [mobilityLevel, setMobilityLevel] = useState<string | null>(null);
+  const [riskTolerance, setRiskTolerance] = useState<string | null>(null);
   const [selectedGoals, setSelectedGoals] = useState<string[]>([]);
+  const [selectedActivities, setSelectedActivities] = useState<string[]>([]);
+  const [selectedTherapies, setSelectedTherapies] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -59,7 +89,13 @@ export default function ProfileScreen() {
         setUsername(profile.username || '');
         setEmail(profile.email || '');
         setName(profile.full_name || '');
+        setAge(profile.age ? profile.age.toString() : '');
+        setFitnessLevel(profile.fitness_level || null);
+        setMobilityLevel(profile.mobility_level || null);
+        setRiskTolerance(profile.risk_tolerance ? profile.risk_tolerance.charAt(0).toUpperCase() + profile.risk_tolerance.slice(1) : null);
         setSelectedGoals(profile.health_goals || []);
+        setSelectedActivities(profile.activity_preferences || []);
+        setSelectedTherapies(profile.therapy_preferences || []);
       }
     } catch (err) {
       setError('Failed to load profile');
@@ -107,19 +143,32 @@ export default function ProfileScreen() {
     );
   };
 
+  const toggleActivity = (activity: string) => {
+    setSelectedActivities((prev) =>
+      prev.includes(activity) ? prev.filter((a) => a !== activity) : [...prev, activity]
+    );
+  };
+
+  const toggleTherapy = (therapy: string) => {
+    setSelectedTherapies((prev) =>
+      prev.includes(therapy) ? prev.filter((t) => t !== therapy) : [...prev, therapy]
+    );
+  };
+
   const handleSave = async () => {
     if (!name.trim()) {
       setError('Please enter your name');
       return;
     }
 
-    if (selectedGoals.length === 0) {
-      setError('Please select at least one health goal');
+    if (email && !email.includes('@')) {
+      setError('Please enter a valid email address');
       return;
     }
 
-    if (email && !email.includes('@')) {
-      setError('Please enter a valid email address');
+    const ageNumber = age ? parseInt(age, 10) : undefined;
+    if (age && (isNaN(ageNumber!) || ageNumber! < 13 || ageNumber! > 120)) {
+      setError('Please enter a valid age between 13 and 120');
       return;
     }
 
@@ -137,7 +186,13 @@ export default function ProfileScreen() {
     const updatedProfile = await updateUserProfile(user.id, {
       full_name: name,
       email: email || undefined,
-      health_goals: selectedGoals,
+      age: ageNumber,
+      fitness_level: fitnessLevel || undefined,
+      mobility_level: mobilityLevel || undefined,
+      risk_tolerance: riskTolerance ? riskTolerance.toLowerCase() : undefined,
+      health_goals: selectedGoals.length > 0 ? selectedGoals : undefined,
+      activity_preferences: selectedActivities.length > 0 ? selectedActivities : undefined,
+      therapy_preferences: selectedTherapies.length > 0 ? selectedTherapies : undefined,
     });
 
     if (!updatedProfile) {
@@ -206,6 +261,115 @@ export default function ProfileScreen() {
               keyboardType="email-address"
               autoCapitalize="none"
             />
+
+            <Text style={[styles.inputLabel, { marginTop: 16 }]}>Age</Text>
+            <TextInput
+              style={styles.input}
+              value={age}
+              onChangeText={setAge}
+              placeholder="Enter your age (optional)"
+              placeholderTextColor="#9CA3AF"
+              keyboardType="number-pad"
+            />
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Fitness & Mobility</Text>
+          <View style={styles.card}>
+            <Text style={styles.inputLabel}>Fitness Level</Text>
+            <View style={styles.optionsRow}>
+              {FITNESS_LEVELS.map((level) => {
+                const isSelected = fitnessLevel === level;
+                return (
+                  <TouchableOpacity
+                    key={level}
+                    style={[styles.optionButton, isSelected && styles.optionButtonSelected]}
+                    onPress={() => setFitnessLevel(level)}
+                  >
+                    <Text style={[styles.optionButtonText, isSelected && styles.optionButtonTextSelected]}>
+                      {level}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            <Text style={[styles.inputLabel, { marginTop: 16 }]}>Mobility Level</Text>
+            <View style={styles.optionsRow}>
+              {MOBILITY_LEVELS.map((level) => {
+                const isSelected = mobilityLevel === level;
+                return (
+                  <TouchableOpacity
+                    key={level}
+                    style={[styles.optionButton, isSelected && styles.optionButtonSelected]}
+                    onPress={() => setMobilityLevel(level)}
+                  >
+                    <Text style={[styles.optionButtonText, isSelected && styles.optionButtonTextSelected]}>
+                      {level}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            <Text style={[styles.inputLabel, { marginTop: 16 }]}>Risk Tolerance</Text>
+            <View style={styles.optionsRow}>
+              {RISK_TOLERANCE_OPTIONS.map((level) => {
+                const isSelected = riskTolerance === level;
+                return (
+                  <TouchableOpacity
+                    key={level}
+                    style={[styles.optionButton, isSelected && styles.optionButtonSelected]}
+                    onPress={() => setRiskTolerance(level)}
+                  >
+                    <Text style={[styles.optionButtonText, isSelected && styles.optionButtonTextSelected]}>
+                      {level}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Activity Preferences</Text>
+          <View style={styles.goalsGrid}>
+            {ACTIVITY_PREFERENCES.map((activity) => {
+              const isSelected = selectedActivities.includes(activity);
+              return (
+                <TouchableOpacity
+                  key={activity}
+                  style={[styles.goalChip, isSelected && styles.goalChipSelected]}
+                  onPress={() => toggleActivity(activity)}
+                >
+                  <Text style={[styles.goalChipText, isSelected && styles.goalChipTextSelected]}>
+                    {activity}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Therapy Preferences</Text>
+          <View style={styles.goalsGrid}>
+            {THERAPY_PREFERENCES.map((therapy) => {
+              const isSelected = selectedTherapies.includes(therapy);
+              return (
+                <TouchableOpacity
+                  key={therapy}
+                  style={[styles.goalChip, isSelected && styles.goalChipSelected]}
+                  onPress={() => toggleTherapy(therapy)}
+                >
+                  <Text style={[styles.goalChipText, isSelected && styles.goalChipTextSelected]}>
+                    {therapy}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
           </View>
         </View>
 
@@ -504,6 +668,34 @@ const styles = StyleSheet.create({
     color: '#5A6C4A',
   },
   goalChipTextSelected: {
+    color: '#FFFFFF',
+  },
+  optionsRow: {
+    flexDirection: 'row',
+    gap: 8,
+    flexWrap: 'wrap',
+  },
+  optionButton: {
+    flex: 1,
+    minWidth: 80,
+    backgroundColor: '#F5F8F3',
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderWidth: 2,
+    borderColor: '#E5E7EB',
+    alignItems: 'center',
+  },
+  optionButtonSelected: {
+    backgroundColor: '#4A7C2E',
+    borderColor: '#4A7C2E',
+  },
+  optionButtonText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#5A6C4A',
+  },
+  optionButtonTextSelected: {
     color: '#FFFFFF',
   },
   biometricPasswordSection: {
