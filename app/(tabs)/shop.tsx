@@ -61,7 +61,7 @@ export default function ShopScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Shop</Text>
+          <Text style={styles.headerTitle}>Collection</Text>
         </View>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#4A7C2E" />
@@ -73,7 +73,7 @@ export default function ShopScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Shop</Text>
+        <Text style={styles.headerTitle}>Collection</Text>
         <Text style={styles.headerSubtitle}>
           Curated gear and wellness products for your nature journey
         </Text>

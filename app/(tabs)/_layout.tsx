@@ -45,7 +45,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="shop"
         options={{
-          title: 'Shop',
+          title: 'Collection',
           tabBarIcon: ({ size, color }) => (
             <ShoppingBag size={size} color={color} />
           ),
