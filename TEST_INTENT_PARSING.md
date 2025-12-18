@@ -1,5 +1,14 @@
 # Intent Parsing Test Guide
 
+## Recent Fix (2025-12-18)
+Fixed critical bug where duration and other parsed intent values were not being applied to the Create Excursion form. The issue was that `useLocalSearchParams()` was not being used to read the `intentData` parameter passed from the home screen.
+
+**What was fixed:**
+- Added `useLocalSearchParams()` import and hook
+- Added intent application logic on component mount
+- Prevented user preferences from overwriting intent values
+- All parsed values (duration, activities, goals, difficulty) now pre-fill correctly
+
 ## Test Cases
 
 ### Test 1: "1 hour hike near here"

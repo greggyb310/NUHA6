@@ -13,7 +13,7 @@ import {
   Keyboard,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import * as Location from 'expo-location';
 import { supabase } from '@/services/supabase';
 import { getCurrentWeather, type WeatherData } from '@/services/weather';
@@ -21,6 +21,7 @@ import { getExcursionPlan } from '@/services/ai';
 import { searchNatureSpotsNearby } from '@/services/nature-spots';
 import { LoadingScreen } from '@/components/loading-screen';
 import MinimalWeather from '@/components/minimal-weather';
+import type { ParsedIntent } from '@/types/intent';
 
 const ACTIVITY_OPTIONS = [
   'Walking',
@@ -66,6 +67,8 @@ const DURATION_OPTIONS = [
 ];
 
 export default function CreateScreen() {
+  const params = useLocalSearchParams();
+  const [parsedIntent, setParsedIntent] = useState<ParsedIntent | null>(null);
   const [selectedActivities, setSelectedActivities] = useState<string[]>([]);
   const [selectedTherapeutic, setSelectedTherapeutic] = useState<string[]>([]);
   const [riskTolerance, setRiskTolerance] = useState<string>('medium');
@@ -85,11 +88,56 @@ export default function CreateScreen() {
   const scrollViewRef = useRef<ScrollView>(null);
 
   useEffect(() => {
+    if (params.intentData) {
+      try {
+        const intent = JSON.parse(params.intentData as string) as ParsedIntent;
+        setParsedIntent(intent);
+
+        if (intent.durationMinutes) {
+          setDuration(intent.durationMinutes);
+        }
+
+        if (intent.activities && intent.activities.length > 0) {
+          setSelectedActivities(intent.activities);
+        }
+
+        if (intent.therapeuticGoals && intent.therapeuticGoals.length > 0) {
+          const mappedGoals = intent.therapeuticGoals.map(goal => {
+            const titleCase = goal.split(' ')
+              .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+              .join(' ');
+            const goalMap: Record<string, string> = {
+              'Reduce Stress': 'Stress Relief',
+              'Improve Mood': 'Mood Enhancement',
+              'Boost Energy': 'Energy Boost',
+              'Improve Sleep': 'Sleep Improvement',
+              'Increase Focus': 'Focus & Clarity',
+              'Relax': 'Stress Relief',
+            };
+            return goalMap[titleCase] || titleCase;
+          });
+          setSelectedTherapeutic(mappedGoals);
+        }
+
+        if (intent.difficulty) {
+          setRiskTolerance(intent.difficulty === 'easy' ? 'low' : intent.difficulty === 'hard' ? 'high' : 'medium');
+        }
+      } catch (e) {
+        console.error('Failed to parse intent:', e);
+      }
+    }
+  }, [params.intentData]);
+
+  useEffect(() => {
     loadUserPreferences();
     loadWeather();
   }, []);
 
   const loadUserPreferences = async () => {
+    if (params.intentData) {
+      return;
+    }
+
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
