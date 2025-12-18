@@ -75,7 +75,8 @@ export default function CreateExcursionScreen() {
   const [activeModal, setActiveModal] = useState<ModalType>(null);
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
   const [weather, setWeather] = useState<WeatherData | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [showDelayedLoader, setShowDelayedLoader] = useState(false);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [nearbySpots, setNearbySpots] = useState<number>(0);
@@ -85,11 +86,16 @@ export default function CreateExcursionScreen() {
   }, []);
 
   const loadLocationAndWeather = async () => {
+    const delayTimer = setTimeout(() => {
+      setShowDelayedLoader(true);
+    }, 500);
+
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
         setError('Location permission is required to find nearby nature spots.');
-        setLoading(false);
+        clearTimeout(delayTimer);
+        setShowDelayedLoader(false);
         return;
       }
 
@@ -117,11 +123,13 @@ export default function CreateExcursionScreen() {
         setError('No nearby nature spots found. Do you know anywhere we can do this? Try moving to a different location or adjusting your preferences.');
       }
 
-      setLoading(false);
+      clearTimeout(delayTimer);
+      setShowDelayedLoader(false);
     } catch (err) {
       console.error('Error loading location:', err);
       setError('Unable to get your location. Please try again.');
-      setLoading(false);
+      clearTimeout(delayTimer);
+      setShowDelayedLoader(false);
     }
   };
 
@@ -298,10 +306,6 @@ export default function CreateExcursionScreen() {
     }
   };
 
-  if (loading) {
-    return <LoadingScreen message="Finding nature spots near you..." />;
-  }
-
   if (creating) {
     return <LoadingScreen message="Creating your personalized nature experience..." />;
   }
@@ -313,6 +317,15 @@ export default function CreateExcursionScreen() {
       </View>
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+        {showDelayedLoader && !weather && (
+          <View style={styles.weatherCard}>
+            <View style={styles.weatherLeft}>
+              <ActivityIndicator size="small" color="#4A7C2E" />
+              <Text style={styles.weatherLoadingText}>Loading weather...</Text>
+            </View>
+          </View>
+        )}
+
         {weather && (
           <View style={styles.weatherCard}>
             <View style={styles.weatherLeft}>
@@ -413,12 +426,14 @@ export default function CreateExcursionScreen() {
 
       <View style={styles.footer}>
         <TouchableOpacity
-          style={[styles.createButton, nearbySpots === 0 && styles.createButtonDisabled]}
+          style={[styles.createButton, (!location || nearbySpots === 0) && styles.createButtonDisabled]}
           onPress={handleCreate}
-          disabled={nearbySpots === 0}
+          disabled={!location || nearbySpots === 0}
           activeOpacity={0.8}
         >
-          <Text style={styles.createButtonText}>Create Experience</Text>
+          <Text style={styles.createButtonText}>
+            {!location ? 'Loading location...' : 'Create Experience'}
+          </Text>
         </TouchableOpacity>
       </View>
 
@@ -611,6 +626,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
+  },
+  weatherLoadingText: {
+    fontSize: 16,
+    color: '#5A6C4A',
+    marginLeft: 8,
   },
   weatherTemp: {
     fontSize: 32,
