@@ -1,5 +1,4 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { createClient } from "jsr:@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -21,82 +20,7 @@ interface Place {
   distance: number;
 }
 
-interface PlacesResponse {
-  places: Place[];
-  debug?: any;
-}
-
-function roundCoordinate(coord: number, decimals = 2): number {
-  return Math.round(coord * Math.pow(10, decimals)) / Math.pow(10, decimals);
-}
-
-function getCacheKey(lat: number, lng: number, radius: number): string {
-  const roundedLat = roundCoordinate(lat);
-  const roundedLng = roundCoordinate(lng);
-  return `places:${roundedLat}:${roundedLng}:${Math.round(radius)}`;
-}
-
-async function getFromCache(cacheKey: string): Promise<PlacesResponse | null> {
-  try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-    const { data, error } = await supabase
-      .from("api_cache")
-      .select("value, expires_at")
-      .eq("cache_key", cacheKey)
-      .maybeSingle();
-
-    if (error || !data) {
-      return null;
-    }
-
-    const expiresAt = new Date(data.expires_at);
-    if (expiresAt <= new Date()) {
-      return null;
-    }
-
-    console.log("[cache] hit:", cacheKey);
-    return data.value as PlacesResponse;
-  } catch {
-    return null;
-  }
-}
-
-async function setCache(cacheKey: string, value: PlacesResponse, ttlMinutes = 360): Promise<void> {
-  try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-    const expiresAt = new Date(Date.now() + ttlMinutes * 60 * 1000);
-
-    await supabase
-      .from("api_cache")
-      .upsert({
-        cache_key: cacheKey,
-        value,
-        expires_at: expiresAt.toISOString(),
-      });
-
-    console.log("[cache] set:", cacheKey, "ttl:", ttlMinutes, "min");
-  } catch (error) {
-    console.error("[cache] set error:", error);
-  }
-}
-
 Deno.serve(async (req: Request) => {
-  const perfStart = Date.now();
-  const perfMarks: Record<string, number> = {};
-  const mark = (label: string) => {
-    perfMarks[label] = Date.now();
-    const elapsed = Date.now() - perfStart;
-    console.log(`[PERF] ${label}: ${elapsed}ms`);
-  };
-
-  mark('request_start');
-
   if (req.method === "OPTIONS") {
     return new Response(null, {
       status: 200,
@@ -106,7 +30,6 @@ Deno.serve(async (req: Request) => {
 
   try {
     const { latitude, longitude }: RequestBody = await req.json();
-    mark('body_parsed');
 
     if (!latitude || !longitude) {
       return new Response(
@@ -121,161 +44,117 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const radius = 8046.72;
-    const cacheKey = getCacheKey(latitude, longitude, radius);
-    const cached = await getFromCache(cacheKey);
-    mark('cache_checked');
+    console.log(`Searching for parks/trails near ${latitude}, ${longitude}`);
 
-    if (cached) {
-      const totalTime = Date.now() - perfStart;
-      console.log(`[PERF] Total request time (cache hit): ${totalTime}ms`);
+    const radiusMeters = 8000;
+
+    const query = `
+      [out:json][timeout:15];
+      (
+        node["leisure"="park"](around:${radiusMeters},${latitude},${longitude});
+        way["leisure"="park"](around:${radiusMeters},${latitude},${longitude});
+        relation["leisure"="park"](around:${radiusMeters},${latitude},${longitude});
+        node["leisure"="nature_reserve"](around:${radiusMeters},${latitude},${longitude});
+        way["leisure"="nature_reserve"](around:${radiusMeters},${latitude},${longitude});
+        way["highway"="path"]["name"](around:${radiusMeters},${latitude},${longitude});
+        way["highway"="footway"]["name"](around:${radiusMeters},${latitude},${longitude});
+        relation["route"="hiking"](around:${radiusMeters},${latitude},${longitude});
+      );
+      out center 20;
+    `.trim();
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 12000);
+
+    try {
+      const response = await fetch(
+        `https://overpass-api.de/api/interpreter`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: `data=${encodeURIComponent(query)}`,
+          signal: controller.signal,
+        }
+      );
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        console.error("OSM API error:", response.status);
+        throw new Error(`OSM API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log(`OSM returned ${data.elements?.length || 0} elements`);
+
+      const places: Place[] = [];
+
+      if (data.elements && data.elements.length > 0) {
+        for (const element of data.elements) {
+          const lat = element.lat || element.center?.lat;
+          const lng = element.lon || element.center?.lon;
+          const name = element.tags?.name;
+
+          if (!lat || !lng || !name) continue;
+
+          const distance = calculateDistance(latitude, longitude, lat, lng);
+
+          let type = "park";
+          if (element.tags?.highway === "path" || element.tags?.highway === "footway") {
+            type = "trail";
+          } else if (element.tags?.route === "hiking") {
+            type = "hiking trail";
+          } else if (element.tags?.leisure === "nature_reserve") {
+            type = "nature reserve";
+          }
+
+          places.push({
+            id: `osm-${element.id}`,
+            name,
+            latitude: lat,
+            longitude: lng,
+            type,
+            distance,
+          });
+        }
+      }
+
+      places.sort((a, b) => a.distance - b.distance);
+      const uniquePlaces = Array.from(
+        new Map(places.map((p) => [p.name, p])).values()
+      ).slice(0, 10);
+
+      console.log(`Returning ${uniquePlaces.length} unique places`);
+
       return new Response(
-        JSON.stringify(cached),
+        JSON.stringify({ places: uniquePlaces }),
         {
           status: 200,
           headers: {
             ...corsHeaders,
             "Content-Type": "application/json",
-            "X-Cache": "HIT",
           },
         }
       );
+    } catch (fetchError) {
+      clearTimeout(timeoutId);
+      console.error("OSM fetch failed:", fetchError);
+      throw fetchError;
     }
-
-    console.log("[cache] miss:", cacheKey);
-
-    const allPlaces: Place[] = [];
-    const debugInfo: any = { searches: [], totalResults: 0, source: "openstreetmap" };
-
-    const queries = [
-      { amenity: "park", type: "park" },
-      { leisure: "park", type: "park" },
-      { leisure: "nature_reserve", type: "nature reserve" },
-      { natural: "beach", type: "beach" },
-      { natural: "water", type: "lake" },
-      { leisure: "garden", type: "garden" },
-      { tourism: "viewpoint", type: "viewpoint" },
-      { highway: "path", type: "trail" },
-      { highway: "footway", type: "trail" },
-      { highway: "track", type: "trail" },
-      { route: "hiking", type: "hiking trail" },
-    ];
-
-    const fetchWithTimeout = async (url: string, timeoutMs: number = 10000) => {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-
-      try {
-        const response = await fetch(url, { signal: controller.signal });
-        clearTimeout(timeoutId);
-        return response;
-      } catch (error) {
-        clearTimeout(timeoutId);
-        throw error;
-      }
-    };
-
-    const queryPromises = queries.map(async (query) => {
-      const key = Object.keys(query).find(k => k !== 'type');
-      const value = key ? query[key as keyof typeof query] : '';
-      const type = query.type;
-
-      const url = `https://overpass-api.de/api/interpreter?data=[out:json];(node[${key}=${value}](around:${radius},${latitude},${longitude});way[${key}=${value}](around:${radius},${latitude},${longitude}););out center;`;
-
-      try {
-        const response = await fetchWithTimeout(url, 10000);
-        const data = await response.json();
-
-        const searchResult = {
-          query: `${key}=${value}`,
-          status: response.status,
-          resultCount: data.elements?.length || 0,
-        };
-
-        if (data.elements && data.elements.length > 0) {
-          const places = data.elements.slice(0, 5).map((element: any) => {
-            const lat = element.lat || element.center?.lat;
-            const lng = element.lon || element.center?.lon;
-
-            if (!lat || !lng) return null;
-
-            const distance = calculateDistance(latitude, longitude, lat, lng);
-
-            return {
-              id: `osm-${element.id}`,
-              name: element.tags?.name || element.tags?.ref || `${type}`,
-              latitude: lat,
-              longitude: lng,
-              type: type,
-              distance: distance,
-            };
-          }).filter((place: any) => place !== null);
-
-          return { places, searchResult };
-        }
-
-        return { places: [], searchResult };
-      } catch (error) {
-        console.error(`Error fetching ${key}=${value}:`, error);
-        return {
-          places: [],
-          searchResult: {
-            query: `${key}=${value}`,
-            status: 'timeout',
-            resultCount: 0,
-          }
-        };
-      }
-    });
-
-    const results = await Promise.allSettled(queryPromises);
-    mark('all_queries_complete');
-
-    results.forEach((result) => {
-      if (result.status === 'fulfilled' && result.value) {
-        allPlaces.push(...result.value.places);
-        debugInfo.searches.push(result.value.searchResult);
-        debugInfo.totalResults += result.value.places.length;
-      } else if (result.status === 'rejected') {
-        console.error('Query failed:', result.reason);
-      }
-    });
-
-    allPlaces.sort((a, b) => a.distance - b.distance);
-    const uniquePlaces = Array.from(
-      new Map(allPlaces.map((place) => [place.id, place])).values()
-    );
-    const topThree = uniquePlaces.slice(0, 3);
-
-    console.log(`Found ${topThree.length} places using OpenStreetMap for ${latitude},${longitude}`);
-
-    const result = { places: topThree, debug: debugInfo };
-    await setCache(cacheKey, result, 360);
-    mark('cache_saved');
-
-    const totalTime = Date.now() - perfStart;
-    console.log(`[PERF] Total request time (cache miss): ${totalTime}ms`);
-    console.log('[PERF] Breakdown:', JSON.stringify(perfMarks, null, 2));
-
-    return new Response(
-      JSON.stringify(result),
-      {
-        status: 200,
-        headers: {
-          ...corsHeaders,
-          "Content-Type": "application/json",
-          "X-Cache": "MISS",
-        },
-      }
-    );
   } catch (error) {
     console.error("Error:", error);
+
+    let lat = 0, lng = 0;
+    try {
+      const body = await req.clone().json();
+      lat = body.latitude || 0;
+      lng = body.longitude || 0;
+    } catch {}
+
+    const fallbackPlaces = generateFallbackPlaces(lat, lng);
+    console.log("Returning fallback places");
+
     return new Response(
-      JSON.stringify({ 
-        places: generateMockPlaces(0, 0),
-        error: "Using fallback mock data",
-        debug: { errorMessage: String(error), mock: true }
-      }),
+      JSON.stringify({ places: fallbackPlaces, fallback: true }),
       {
         status: 200,
         headers: {
@@ -294,44 +173,51 @@ function calculateDistance(
   lon2: number
 ): number {
   const R = 6371e3;
-  const φ1 = (lat1 * Math.PI) / 180;
-  const φ2 = (lat2 * Math.PI) / 180;
-  const Δφ = ((lat2 - lat1) * Math.PI) / 180;
-  const Δλ = ((lon2 - lon1) * Math.PI) / 180;
+  const p1 = (lat1 * Math.PI) / 180;
+  const p2 = (lat2 * Math.PI) / 180;
+  const dp = ((lat2 - lat1) * Math.PI) / 180;
+  const dl = ((lon2 - lon1) * Math.PI) / 180;
 
   const a =
-    Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
-    Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+    Math.sin(dp / 2) * Math.sin(dp / 2) +
+    Math.cos(p1) * Math.cos(p2) * Math.sin(dl / 2) * Math.sin(dl / 2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
   return R * c;
 }
 
-function generateMockPlaces(latitude: number, longitude: number): Place[] {
+function generateFallbackPlaces(latitude: number, longitude: number): Place[] {
+  if (!latitude || !longitude) {
+    return [
+      { id: "fallback-1", name: "Local Park", latitude: 37.7749, longitude: -122.4194, type: "park", distance: 500 },
+      { id: "fallback-2", name: "Nature Trail", latitude: 37.7739, longitude: -122.4184, type: "trail", distance: 1200 },
+    ];
+  }
+
   return [
     {
-      id: "mock-1",
+      id: "fallback-1",
       name: "Nearby Park",
-      latitude: latitude + 0.01,
-      longitude: longitude + 0.01,
+      latitude: latitude + 0.008,
+      longitude: longitude + 0.008,
       type: "park",
-      distance: 1200,
+      distance: 1000,
     },
     {
-      id: "mock-2",
+      id: "fallback-2",
       name: "Nature Trail",
-      latitude: latitude - 0.015,
-      longitude: longitude + 0.02,
+      latitude: latitude - 0.012,
+      longitude: longitude + 0.015,
       type: "trail",
-      distance: 2100,
+      distance: 2000,
     },
     {
-      id: "mock-3",
-      name: "Scenic Viewpoint",
-      latitude: latitude + 0.02,
-      longitude: longitude - 0.015,
-      type: "viewpoint",
-      distance: 2800,
+      id: "fallback-3",
+      name: "Community Park",
+      latitude: latitude + 0.015,
+      longitude: longitude - 0.01,
+      type: "park",
+      distance: 2200,
     },
   ];
 }
