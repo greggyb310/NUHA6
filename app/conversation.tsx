@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
-import { Send, X } from 'lucide-react-native';
+import { Send, X, ArrowRight } from 'lucide-react-native';
 import { getOrCreateSession, getSessionMessages, sendMessage, type StoredMessage } from '@/services/chat';
 import type { ChatMessage } from '@/types/ai';
 import type { ParsedIntent } from '@/types/intent';
@@ -26,6 +26,7 @@ export default function ConversationScreen() {
   const [loading, setLoading] = useState(true);
   const scrollViewRef = useRef<ScrollView>(null);
   const [parsedIntent, setParsedIntent] = useState<ParsedIntent | null>(null);
+  const [readyToCreate, setReadyToCreate] = useState(false);
 
   useEffect(() => {
     initializeConversation();
@@ -108,7 +109,7 @@ export default function ConversationScreen() {
       scrollToBottom();
 
       if (result.readyToCreate) {
-        handleExcursionCreation();
+        setReadyToCreate(true);
       }
     }
 
@@ -143,7 +144,7 @@ export default function ConversationScreen() {
       scrollToBottom();
 
       if (result.readyToCreate) {
-        handleExcursionCreation();
+        setReadyToCreate(true);
       }
     }
 
@@ -237,6 +238,18 @@ export default function ConversationScreen() {
             </View>
           )}
         </ScrollView>
+
+        {readyToCreate && (
+          <View style={styles.createButtonContainer}>
+            <TouchableOpacity
+              style={styles.createButton}
+              onPress={handleExcursionCreation}
+            >
+              <Text style={styles.createButtonText}>Create Excursion</Text>
+              <ArrowRight size={20} color="#FFFFFF" />
+            </TouchableOpacity>
+          </View>
+        )}
 
         <View style={styles.inputContainer}>
           <TextInput
@@ -351,6 +364,33 @@ const styles = StyleSheet.create({
   },
   assistantText: {
     color: '#2D3E1F',
+  },
+  createButtonContainer: {
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    backgroundColor: '#FFFFFF',
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+  },
+  createButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#4A7C2E',
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    gap: 8,
+    shadowColor: '#4A7C2E',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  createButtonText: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
   inputContainer: {
     flexDirection: 'row',

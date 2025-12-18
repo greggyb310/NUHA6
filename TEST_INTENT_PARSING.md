@@ -48,10 +48,11 @@ When users type in the home screen input, they now enter a **conversational inte
 2. **Navigates to conversation screen** with green banner showing "Based on: 1 hour hike near here"
 3. AI greets: *"I'd love to help you plan a 1-hour hiking excursion near your location! To make this perfect for you, what would you like to focus on during this hike? For example, stress relief, mood enhancement, or just enjoying nature?"*
 4. User responds: "stress relief"
-5. AI confirms: *"Perfect! I'll create a 1-hour hiking excursion focused on stress relief near your current location. Ready to create it?"*
-6. User responds: "yes" or "sounds good"
-7. **Auto-navigates to form** which immediately creates the excursion
-8. Shows loading screen → excursion created → navigates to detail page
+5. AI confirms: *"Perfect! I have everything I need for a 1-hour hiking excursion focused on stress relief. A 'Create Excursion' button will appear below - tap it when you're ready!"*
+6. **Green "Create Excursion" button appears** at the bottom of the chat (above keyboard)
+7. User taps the button
+8. **Auto-navigates to form** which immediately creates the excursion
+9. Shows loading screen → excursion created → navigates to detail page
 
 ---
 
