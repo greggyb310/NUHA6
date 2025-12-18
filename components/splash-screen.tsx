@@ -1,6 +1,5 @@
-import { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ImageBackground, Dimensions } from 'react-native';
-import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
+import { useEffect, useState, useRef } from 'react';
+import { View, Text, StyleSheet, ImageBackground, Dimensions, Animated } from 'react-native';
 
 const NATURE_IMAGES = [
   require('@/assets/images/img_1335_medium.jpeg'),
@@ -22,6 +21,17 @@ export function SplashScreen() {
     return NATURE_IMAGES[randomIndex];
   });
 
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 1000,
+      delay: 300,
+      useNativeDriver: true,
+    }).start();
+  }, [fadeAnim]);
+
   return (
     <View style={styles.container}>
       <ImageBackground
@@ -31,8 +41,7 @@ export function SplashScreen() {
       >
         <View style={styles.overlay} />
         <Animated.View
-          entering={FadeIn.duration(1000).delay(300)}
-          style={styles.content}
+          style={[styles.content, { opacity: fadeAnim }]}
         >
           <Text style={styles.welcomeText}>Welcome</Text>
           <Text style={styles.subtitle}>to NatureUP Health</Text>
