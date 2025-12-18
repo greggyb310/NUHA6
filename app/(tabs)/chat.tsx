@@ -31,7 +31,7 @@ interface Message {
 
 const FIRST_TIME_GREETING = "Hi! I'm your nature wellness guide. I can help you plan a personalized outdoor experience based on how you're feeling today. What kind of nature experience are you looking for? You can tell me things like how much time you have, what activities interest you, or what you'd like to get out of your time outdoors.\n\nOr tap the Create icon below to build your excursion with more options.";
 
-const RETURNING_GREETING = "Hi! Just a couple quick questions and we'll have your excursion ready.";
+const RETURNING_GREETING = "Let me know how long you have and anything else that I should know when we plan your excursion.";
 
 const CREATE_TAB_HINT = "\n\nOr tap the Create icon below to build your excursion with more options.";
 
