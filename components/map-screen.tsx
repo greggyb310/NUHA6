@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity } from 'react-native';
 import MapView, { Marker, Circle, Polyline, PROVIDER_DEFAULT, Region } from 'react-native-maps';
 import * as Location from 'expo-location';
@@ -46,6 +46,7 @@ export default function MapScreen({
   const [mapType, setMapType] = useState<MapType>('standard');
   const [showTraffic, setShowTraffic] = useState(false);
   const [showLayerMenu, setShowLayerMenu] = useState(false);
+  const mapRef = useRef<MapView | null>(null);
 
   useEffect(() => {
     if (showNearbyPlaces) {
@@ -129,6 +130,47 @@ export default function MapScreen({
     }
   };
 
+  useEffect(() => {
+    if (loading) return;
+    if (!mapRef.current) return;
+
+    const coords: Array<{ latitude: number; longitude: number }> = [];
+
+    if (location?.coords?.latitude && location?.coords?.longitude) {
+      coords.push({
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+      });
+    }
+
+    if (routeWaypoints && routeWaypoints.length > 0) {
+      coords.push(
+        ...routeWaypoints.map(wp => ({
+          latitude: wp.lat,
+          longitude: wp.lng,
+        }))
+      );
+    }
+
+    if (destination?.latitude && destination?.longitude) {
+      coords.push({
+        latitude: destination.latitude,
+        longitude: destination.longitude,
+      });
+    }
+
+    if (coords.length < 2) return;
+
+    try {
+      mapRef.current.fitToCoordinates(coords, {
+        edgePadding: { top: 80, right: 80, bottom: 80, left: 80 },
+        animated: true,
+      });
+    } catch {
+      // no-op
+    }
+  }, [loading, location, routeWaypoints, destination]);
+
   if (loading) {
     return (
       <View style={styles.centerContainer}>
@@ -171,6 +213,7 @@ export default function MapScreen({
   return (
     <View style={styles.container}>
       <MapView
+        ref={mapRef}
         style={styles.map}
         provider={PROVIDER_DEFAULT}
         mapType={mapType}

@@ -107,6 +107,22 @@ export default function ExcursionDetailScreen() {
 
   const excursionLocation = startLocation || waypoints[0];
 
+  if (!excursionLocation?.lat || !excursionLocation?.lng) {
+    return (
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+            <ArrowLeft size={24} color="#2D3E1F" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Error</Text>
+        </View>
+        <View style={styles.centered}>
+          <Text style={styles.errorText}>This excursion does not have a valid location.</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   const destinationPoint = destination
     ? { lat: destination.lat, lng: destination.lng }
     : (waypoints.length > 0 ? waypoints[waypoints.length - 1] : excursionLocation);
