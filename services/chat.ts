@@ -3,6 +3,8 @@ import { aiRun } from './ai-api';
 import { sendVoiceMessage as sendVoiceToApi, base64ToDataUri } from './voice';
 import { getUserProfile } from './user-profile';
 import type { ChatMessage, HealthCoachResult } from '@/types/ai';
+import { transitionToExcursionPlanning, getAssistantForPhase, updatePhaseMetadata } from './phase-manager';
+import { detectExcursionIntent, detectDurationIntent, detectLocationIntent, detectConfirmationIntent } from './intent-detector';
 
 export type ConversationPhase = 'initial_chat' | 'excursion_planning' | 'excursion_creation' | 'excursion_guiding' | 'post_excursion_followup';
 
@@ -151,39 +153,70 @@ export async function sendMessage(
 ): Promise<{ reply: string; readyToCreate?: boolean; error?: string }> {
   await saveMessage(sessionId, 'user', userMessage);
 
-  const { data: sessionRow, error: sessionErr } = await supabase
+  let { data: sessionRow, error: sessionErr } = await supabase
     .from('chat_sessions')
     .select('assistant_type, phase, conversation_metadata')
     .eq('id', sessionId)
     .maybeSingle();
 
-  if (!assistantType) {
-    if (!sessionErr && sessionRow?.assistant_type) {
-      assistantType = sessionRow.assistant_type;
-    } else {
-      assistantType = 'health_coach';
+  if (sessionErr || !sessionRow) {
+    return {
+      reply: '',
+      error: 'Failed to fetch session',
+    };
+  }
+
+  const currentPhase = sessionRow.phase;
+  const sessionMetadata = sessionRow.conversation_metadata || {};
+
+  if (currentPhase === 'initial_chat') {
+    const hasExcursionIntent = detectExcursionIntent(userMessage);
+
+    if (hasExcursionIntent) {
+      const transitionSuccess = await transitionToExcursionPlanning(sessionId);
+
+      if (transitionSuccess) {
+        const refetchResult = await supabase
+          .from('chat_sessions')
+          .select('assistant_type, phase, conversation_metadata')
+          .eq('id', sessionId)
+          .maybeSingle();
+
+        if (refetchResult.data) {
+          sessionRow = refetchResult.data;
+        }
+      }
     }
   }
 
-  let phase = sessionRow?.phase || 'initial_chat';
-  const sessionMetadata = sessionRow?.conversation_metadata || {};
+  if (currentPhase === 'excursion_planning') {
+    const duration = detectDurationIntent(userMessage);
+    const location = detectLocationIntent(userMessage);
+    const confirmation = detectConfirmationIntent(userMessage);
 
-  const userMessageLower = userMessage.toLowerCase();
-  const excursionKeywords = ['hike', 'walk', 'excursion', 'trail', 'nature spot', 'outdoor', 'explore'];
-  const hasExcursionIntent = excursionKeywords.some(keyword => userMessageLower.includes(keyword));
+    const updates: Record<string, unknown> = {};
 
-  if (phase === 'initial_chat' && hasExcursionIntent && assistantType === 'health_coach') {
-    phase = 'excursion_planning';
-    await supabase
-      .from('chat_sessions')
-      .update({
-        phase: 'excursion_planning',
-        assistant_type: 'excursion_creator'
-      })
-      .eq('id', sessionId);
+    if (duration) {
+      updates.duration_minutes = duration;
+      updates.detected_duration = duration;
+    }
 
-    assistantType = 'excursion_creator';
+    if (location.wantsSuggestions || location.specificLocation) {
+      updates.location_preference = location.wantsSuggestions ? 'ai_suggestions' : location.specificLocation;
+      updates.specified_location = location.specificLocation;
+    }
+
+    if (confirmation && sessionMetadata.asked_confirmation) {
+      updates.user_confirmed = true;
+    }
+
+    if (Object.keys(updates).length > 0) {
+      await updatePhaseMetadata(sessionId, updates);
+    }
   }
+
+  const phase = sessionRow.phase;
+  assistantType = assistantType || getAssistantForPhase(phase);
 
   const historyForApi: ChatMessage[] = conversationHistory.map((msg) => ({
     role: msg.role,
@@ -193,7 +226,7 @@ export async function sendMessage(
   const { data: { user } } = await supabase.auth.getUser();
   let userContext: Record<string, unknown> = {
     phase,
-    session_metadata: sessionMetadata,
+    session_metadata: sessionRow.conversation_metadata || {},
   };
 
   if (user) {
@@ -235,15 +268,9 @@ export async function sendMessage(
   const askedConfirmation = (response.result as any).askedConfirmation;
 
   if (askedConfirmation !== undefined) {
-    const updatedMetadata = {
-      ...sessionMetadata,
+    await updatePhaseMetadata(sessionId, {
       asked_confirmation: askedConfirmation,
-    };
-
-    await supabase
-      .from('chat_sessions')
-      .update({ conversation_metadata: updatedMetadata })
-      .eq('id', sessionId);
+    });
   }
 
   await saveMessage(sessionId, 'assistant', assistantReply);

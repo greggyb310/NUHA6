@@ -20,7 +20,7 @@ import { getExcursionPlan } from '@/services/ai';
 import { searchNatureSpotsNearby } from '@/services/nature-spots';
 import { LoadingScreen } from '@/components/loading-screen';
 import { Send, Leaf, ArrowLeft } from 'lucide-react-native';
-import { sendMessage as sendChatMessage, getOrCreateSession } from '@/services/chat';
+import { sendMessage as sendChatMessage, getOrCreateSession, getSession, type ConversationPhase } from '@/services/chat';
 import type { ChatMessage } from '@/types/ai';
 
 interface Message {
@@ -49,6 +49,7 @@ export default function ChatScreen() {
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
   const [creatingExcursion, setCreatingExcursion] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [sessionPhase, setSessionPhase] = useState<ConversationPhase>('initial_chat');
   const scrollViewRef = useRef<ScrollView>(null);
   const inputRef = useRef<TextInput>(null);
 
@@ -62,6 +63,7 @@ export default function ChatScreen() {
       const session = await getOrCreateSession('health_coach');
       if (session) {
         setSessionId(session.id);
+        setSessionPhase(session.phase);
       }
 
       const { data: { user } } = await supabase.auth.getUser();
@@ -148,7 +150,7 @@ export default function ChatScreen() {
       }));
 
       if (sessionId) {
-        const result = await sendChatMessage(sessionId, userMessage, conversationHistory, 'health_coach');
+        const result = await sendChatMessage(sessionId, userMessage, conversationHistory);
 
         if (result.reply) {
           const assistantMessage: Message = {
@@ -158,6 +160,11 @@ export default function ChatScreen() {
           };
           setMessages(prev => [...prev, assistantMessage]);
           scrollToBottom();
+
+          const updatedSession = await getSession(sessionId);
+          if (updatedSession) {
+            setSessionPhase(updatedSession.phase);
+          }
         }
       } else {
         const assistantMessage: Message = {
@@ -357,7 +364,9 @@ export default function ChatScreen() {
           <View style={styles.headerIcon}>
             <Leaf size={20} color="#4A7C2E" />
           </View>
-          <Text style={styles.headerTitle}>Nature Guide</Text>
+          <Text style={styles.headerTitle}>
+            {sessionPhase === 'excursion_planning' ? 'Excursion Planning' : 'Nature Guide'}
+          </Text>
         </View>
         <View style={styles.headerSpacer} />
       </View>
@@ -416,7 +425,11 @@ export default function ChatScreen() {
             style={styles.input}
             value={inputText}
             onChangeText={setInputText}
-            placeholder="Tell me what you're looking for..."
+            placeholder={
+              sessionPhase === 'excursion_planning'
+                ? 'How long do you have? Any location preferences?'
+                : "Tell me what you're looking for..."
+            }
             placeholderTextColor="#999"
             multiline
             maxLength={500}

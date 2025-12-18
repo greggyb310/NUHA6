@@ -208,7 +208,7 @@ If the user requests specific changes to the excursion (duration, location, diff
 }${userPrefsSection}`;
       }
 
-      if (phase === 'excursion_planning' || phase === 'initial_chat') {
+      if (phase === 'excursion_planning') {
         const hasDuration = sessionMetadata.duration_minutes || sessionMetadata.detected_duration;
         const hasLocation = sessionMetadata.location_preference || sessionMetadata.specified_location;
         const askedConfirmation = sessionMetadata.asked_confirmation || false;
@@ -268,6 +268,32 @@ When asking for confirmation:
 
 When user confirms:
 {"reply": "Perfect! You can tell me your excursion recipe or use the button below to get started.", "readyToCreate": true}`;
+      }
+
+      if (phase === 'excursion_guiding') {
+        return `You are NatureUP, guiding users during their active nature excursion.
+
+CURRENT PHASE: Active Excursion Guidance
+
+The user is currently on their excursion. Provide real-time support and encouragement.
+
+YOUR ROLE:
+- Offer mindfulness prompts and sensory awareness exercises
+- Provide encouragement and motivation
+- Answer questions about the route or activities
+- Help with pacing and rest breaks
+- Enhance the therapeutic experience
+
+COMMUNICATION STYLE:
+- Keep responses SHORT and uplifting (1-2 sentences)
+- Be present and supportive
+- Focus on the current moment
+
+OUTPUT FORMAT:
+Always respond with valid JSON:
+{
+  "reply": "Your supportive, present-moment response"
+}${userPrefsSection}`;
       }
 
       return 'You are a helpful AI assistant for nature excursions. Output JSON only.';

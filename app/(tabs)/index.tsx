@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { supabase } from '@/services/supabase';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MessageCircle, Send } from 'lucide-react-native';
-import { sendMessage as sendChatMessage, getOrCreateSession } from '@/services/chat';
+import { sendMessage as sendChatMessage, getOrCreateSession, getSession, type ConversationPhase } from '@/services/chat';
 import type { ChatMessage } from '@/types/ai';
 
 const IMAGE_MAP: Record<string, ImageSourcePropType> = {
@@ -58,6 +58,7 @@ export default function HomeScreen() {
   const [inputText, setInputText] = useState('');
   const [sending, setSending] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [sessionPhase, setSessionPhase] = useState<ConversationPhase>('initial_chat');
   const scrollViewRef = useRef<ScrollView>(null);
   const inputRef = useRef<TextInput>(null);
 
@@ -103,6 +104,7 @@ export default function HomeScreen() {
       const session = await getOrCreateSession('health_coach');
       if (session) {
         setSessionId(session.id);
+        setSessionPhase(session.phase);
       }
 
       const { data: { user } } = await supabase.auth.getUser();
@@ -167,7 +169,7 @@ export default function HomeScreen() {
       }));
 
       if (sessionId) {
-        const result = await sendChatMessage(sessionId, userMessage, conversationHistory, 'health_coach');
+        const result = await sendChatMessage(sessionId, userMessage, conversationHistory);
 
         if (result.reply) {
           const assistantMessage: Message = {
@@ -177,6 +179,11 @@ export default function HomeScreen() {
           };
           setMessages(prev => [...prev, assistantMessage]);
           scrollToBottom();
+
+          const updatedSession = await getSession(sessionId);
+          if (updatedSession) {
+            setSessionPhase(updatedSession.phase);
+          }
         }
       } else {
         const assistantMessage: Message = {
@@ -236,7 +243,9 @@ export default function HomeScreen() {
               <View style={styles.chatCard}>
                 <View style={styles.chatHeader}>
                   <MessageCircle size={20} color="#4A7C2E" />
-                  <Text style={styles.chatHeaderTitle}>Nature Guide</Text>
+                  <Text style={styles.chatHeaderTitle}>
+                    {sessionPhase === 'excursion_planning' ? 'Excursion Planning' : 'Nature Guide'}
+                  </Text>
                 </View>
 
                 <ScrollView
