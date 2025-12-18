@@ -4,6 +4,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useFrameworkReady } from '@/hooks/useFrameworkReady';
 import { getCurrentUser } from '@/services/auth';
 import { supabase } from '@/services/supabase';
+import { SplashScreen } from '@/components/splash-screen';
 
 export default function RootLayout() {
   useFrameworkReady();
@@ -59,6 +60,10 @@ export default function RootLayout() {
     const user = await getCurrentUser();
     setIsAuthenticated(!!user);
   };
+
+  if (isAuthenticated === null) {
+    return <SplashScreen />;
+  }
 
   return (
     <>
