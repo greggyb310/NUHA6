@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, ActivityIndicator, ImageSourcePropType } from 'react-native';
+import { View, Text, StyleSheet, ImageBackground, Image, ActivityIndicator, ImageSourcePropType } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { MapPin, MessageCircle, Leaf } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '@/services/supabase';
+import { LinearGradient } from 'expo-linear-gradient';
 
 const IMAGE_MAP: Record<string, ImageSourcePropType> = {
   'img_1335_medium.jpeg': require('@/assets/images/img_1335_medium.jpeg'),
@@ -72,194 +72,166 @@ export default function HomeScreen() {
     }
   };
 
+  const backgroundImage = photo && IMAGE_MAP[photo.image_url]
+    ? IMAGE_MAP[photo.image_url]
+    : require('@/assets/images/img_6096_large_medium.jpeg');
+
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <View style={styles.heroSection}>
-          <View style={styles.logoContainer}>
-            <Image
-              source={require('@/assets/images/natureup_health_logo_-_green_bkgd.jpeg')}
-              style={styles.logo}
-              resizeMode="contain"
-            />
-          </View>
-          <Text style={styles.heroTitle}>NatureUp Health</Text>
-        </View>
-
-        <Text style={styles.welcomeText}>Partnering with Nature</Text>
-
-        {loading ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#4A7C2E" />
-          </View>
-        ) : (
-          <>
-            {photo && IMAGE_MAP[photo.image_url] && (
-              <View style={styles.photoCard}>
+    <View style={styles.container}>
+      <ImageBackground
+        source={backgroundImage}
+        style={styles.backgroundImage}
+        resizeMode="cover"
+      >
+        <LinearGradient
+          colors={['rgba(0,0,0,0.3)', 'rgba(0,0,0,0.5)', 'rgba(0,0,0,0.7)']}
+          style={styles.gradient}
+        >
+          <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+            <View style={styles.topSection}>
+              <View style={styles.logoContainer}>
                 <Image
-                  source={IMAGE_MAP[photo.image_url]}
-                  style={styles.photo}
-                  resizeMode="cover"
+                  source={require('@/assets/images/natureup_health_logo_-_green_bkgd.jpeg')}
+                  style={styles.logo}
+                  resizeMode="contain"
                 />
-                {photo.photographer && (
-                  <Text style={styles.photoCredit}>Photo by {photo.photographer}</Text>
-                )}
               </View>
-            )}
+              <Text style={styles.heroTitle}>NatureUp Health</Text>
+              <Text style={styles.welcomeText}>Partnering with Nature</Text>
+            </View>
 
-            {quote && (
-              <View style={styles.quoteCard}>
-                <Text style={styles.quoteText}>"{quote.quote_text}"</Text>
-                {quote.author && (
-                  <Text style={styles.quoteAuthor}>— {quote.author}</Text>
-                )}
-              </View>
-            )}
-          </>
-        )}
-      </ScrollView>
-    </SafeAreaView>
+            <View style={styles.centerSection}>
+              {loading ? (
+                <ActivityIndicator size="large" color="#FFFFFF" />
+              ) : quote ? (
+                <View style={styles.quoteContainer}>
+                  <Text style={styles.quoteText}>"{quote.quote_text}"</Text>
+                  {quote.author && (
+                    <Text style={styles.quoteAuthor}>— {quote.author}</Text>
+                  )}
+                </View>
+              ) : null}
+            </View>
+
+            <View style={styles.bottomSection}>
+              {photo?.photographer && (
+                <Text style={styles.photoCredit}>Photo by {photo.photographer}</Text>
+              )}
+            </View>
+          </SafeAreaView>
+        </LinearGradient>
+      </ImageBackground>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F8F3',
   },
-  scrollContent: {
-    paddingBottom: 48,
+  backgroundImage: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
   },
-  heroSection: {
+  gradient: {
+    flex: 1,
+  },
+  safeArea: {
+    flex: 1,
+  },
+  topSection: {
     alignItems: 'center',
+    paddingTop: 20,
     paddingHorizontal: 24,
-    paddingTop: 24,
-    paddingBottom: 12,
   },
   logoContainer: {
-    width: 100,
-    height: 100,
-    borderRadius: 14,
-    backgroundColor: '#FFFFFF',
+    width: 80,
+    height: 80,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 12,
     overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
   },
   logo: {
     width: '100%',
     height: '100%',
   },
   heroTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '700',
-    color: '#2D3E1F',
+    color: '#FFFFFF',
     textAlign: 'center',
-  },
-  welcomeText: {
-    fontSize: 24,
-    fontWeight: '600',
-    color: '#4A7C2E',
-    textAlign: 'center',
-    marginHorizontal: 24,
-    marginTop: -8,
-    marginBottom: 48,
-  },
-  loadingContainer: {
-    marginHorizontal: 20,
-    marginBottom: 12,
-    padding: 16,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    alignItems: 'center',
-  },
-  photoCard: {
-    marginHorizontal: 20,
-    marginBottom: 28,
-    borderRadius: 16,
-    overflow: 'hidden',
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  photo: {
-    width: '100%',
-    height: 200,
-  },
-  photoCredit: {
-    fontSize: 10,
-    color: '#9CA3AF',
-    padding: 8,
-    textAlign: 'right',
-  },
-  quoteCard: {
-    marginHorizontal: 20,
-    marginBottom: 12,
-    padding: 14,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    borderLeftWidth: 4,
-    borderLeftColor: '#4A7C2E',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  quoteText: {
-    fontSize: 15,
-    lineHeight: 23,
-    color: '#2D3E1F',
-    fontStyle: 'italic',
-    marginBottom: 10,
-  },
-  quoteAuthor: {
-    fontSize: 13,
-    color: '#5A6C4A',
-    fontWeight: '600',
-    textAlign: 'right',
-  },
-  featuresSection: {
-    paddingHorizontal: 20,
-    paddingVertical: 8,
-  },
-  featureCard: {
-    flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  featureIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: 'rgba(74, 124, 46, 0.1)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 16,
-  },
-  featureContent: {
-    flex: 1,
-    justifyContent: 'center',
-  },
-  featureTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#2D3E1F',
+    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
     marginBottom: 4,
   },
-  featureDescription: {
-    fontSize: 14,
-    color: '#5A6C4A',
-    lineHeight: 20,
+  welcomeText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#FFFFFF',
+    textAlign: 'center',
+    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
+  },
+  centerSection: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 32,
+  },
+  quoteContainer: {
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    borderRadius: 20,
+    padding: 28,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  quoteText: {
+    fontSize: 20,
+    lineHeight: 32,
+    color: '#FFFFFF',
+    fontStyle: 'italic',
+    textAlign: 'center',
+    marginBottom: 16,
+    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
+    fontWeight: '500',
+  },
+  quoteAuthor: {
+    fontSize: 16,
+    color: '#FFFFFF',
+    fontWeight: '600',
+    textAlign: 'center',
+    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
+  },
+  bottomSection: {
+    paddingBottom: 12,
+    paddingHorizontal: 24,
+    alignItems: 'flex-end',
+  },
+  photoCredit: {
+    fontSize: 11,
+    color: 'rgba(255, 255, 255, 0.7)',
+    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
 });
