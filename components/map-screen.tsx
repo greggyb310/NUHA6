@@ -210,37 +210,17 @@ export default function MapScreen({
         ))}
 
         {routeWaypoints && routeWaypoints.length > 0 && (
-          <>
-            <Polyline
-              coordinates={routeWaypoints.map(wp => ({
-                latitude: wp.lat,
-                longitude: wp.lng,
-              }))}
-              strokeColor="#4A7C2E"
-              strokeWidth={3}
-            />
-            {routeWaypoints.map((wp, index) => {
-              const isStart = index === 0;
-              const isEnd = index === routeWaypoints.length - 1;
-              const isMidpoint = index === Math.floor(routeWaypoints.length / 2);
-
-              if (isStart || isEnd || isMidpoint) {
-                const title = isMidpoint ? (destination?.title || 'Destination') : (isStart ? 'Start' : 'End');
-                return (
-                  <Marker
-                    key={`waypoint-${index}`}
-                    coordinate={{ latitude: wp.lat, longitude: wp.lng }}
-                    title={title}
-                    pinColor={isMidpoint ? "#DC2626" : "#4A7C2E"}
-                  />
-                );
-              }
-              return null;
-            })}
-          </>
+          <Polyline
+            coordinates={routeWaypoints.map(wp => ({
+              latitude: wp.lat,
+              longitude: wp.lng,
+            }))}
+            strokeColor="#4A7C2E"
+            strokeWidth={3}
+          />
         )}
 
-        {destination && (!routeWaypoints || routeWaypoints.length === 0) && (
+        {destination && (
           <Marker
             coordinate={{
               latitude: destination.latitude,
