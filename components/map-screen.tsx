@@ -50,12 +50,10 @@ export default function MapScreen({
   useEffect(() => {
     if (showNearbyPlaces) {
       requestLocationAndFetchPlaces();
-    } else if (!initialRegion) {
-      requestLocationOnly();
     } else {
-      setLoading(false);
+      requestLocationOnly();
     }
-  }, [showNearbyPlaces, initialRegion]);
+  }, [showNearbyPlaces]);
 
   const requestLocationOnly = async () => {
     try {
@@ -177,8 +175,8 @@ export default function MapScreen({
         provider={PROVIDER_DEFAULT}
         mapType={mapType}
         showsTraffic={showTraffic}
-        showsPointsOfInterest={true}
-        showsBuildings={true}
+        showsPointsOfInterest={false}
+        showsBuildings={false}
         initialRegion={mapRegion}
         showsUserLocation={!!location}
         showsMyLocationButton={!!location}
