@@ -8,6 +8,7 @@ import { supabase } from '@/services/supabase';
 import { X, Mic, Navigation as NavigationIcon, MapPin, Clock } from 'lucide-react-native';
 import MapScreen from '@/components/map-screen';
 import { LoadingScreen } from '@/components/loading-screen';
+import { createSession, type ChatSession } from '@/services/chat';
 
 interface Excursion {
   id: string;
@@ -42,11 +43,13 @@ export default function ActiveExcursionScreen() {
   const [distanceToNext, setDistanceToNext] = useState<number | null>(null);
   const [elapsedTime, setElapsedTime] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
+  const [guidingSession, setGuidingSession] = useState<ChatSession | null>(null);
   const recordingRef = useRef<Audio.Recording | null>(null);
   const locationSubscription = useRef<Location.LocationSubscription | null>(null);
   const startTime = useRef<number>(Date.now());
 
   useEffect(() => {
+    initializeGuidingSession();
     loadExcursion();
     startLocationTracking();
     startTimer();
@@ -55,6 +58,13 @@ export default function ActiveExcursionScreen() {
       stopLocationTracking();
     };
   }, [id]);
+
+  const initializeGuidingSession = async () => {
+    const session = await createSession('health_coach', 'excursion_guiding', id);
+    if (session) {
+      setGuidingSession(session);
+    }
+  };
 
   const loadExcursion = async () => {
     try {

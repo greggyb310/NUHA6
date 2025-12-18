@@ -13,7 +13,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Send, X, ArrowRight } from 'lucide-react-native';
-import { createSession, getSessionMessages, sendMessage, saveMessage, type StoredMessage } from '@/services/chat';
+import { createSession, getSessionMessages, sendMessage, saveMessage, updateSessionMetadata, type StoredMessage } from '@/services/chat';
 import type { ChatMessage } from '@/types/ai';
 import type { ParsedIntent } from '@/types/intent';
 
@@ -33,9 +33,46 @@ export default function ConversationScreen() {
     initializeConversation();
   }, []);
 
+  const extractInfoFromMessage = (message: string): { duration?: number; location?: string } => {
+    const extracted: { duration?: number; location?: string } = {};
+
+    const durationPatterns = [
+      /(\d+)\s*(hour|hr|hours|hrs)/i,
+      /(\d+)\s*(minute|min|minutes|mins)/i,
+      /(\d+)\s*h/i,
+      /(\d+)\s*m(?:in)?/i,
+    ];
+
+    for (const pattern of durationPatterns) {
+      const match = message.match(pattern);
+      if (match) {
+        const value = parseInt(match[1], 10);
+        const unit = match[2]?.toLowerCase() || match[0].toLowerCase();
+
+        if (unit.includes('h')) {
+          extracted.duration = value * 60;
+        } else {
+          extracted.duration = value;
+        }
+        break;
+      }
+    }
+
+    const locationKeywords = ['surprise', 'choose', 'options', 'suggest', 'pick', 'recommend'];
+    const hasLocationIntent = locationKeywords.some(keyword =>
+      message.toLowerCase().includes(keyword)
+    );
+
+    if (hasLocationIntent) {
+      extracted.location = 'ai_suggestions';
+    }
+
+    return extracted;
+  };
+
   const initializeConversation = async () => {
     try {
-      const session = await createSession('excursion_creator');
+      const session = await createSession('excursion_creator', 'initial_chat');
       if (!session) {
         console.error('Failed to create session');
         setError('Unable to start conversation. Please try again.');
@@ -48,6 +85,20 @@ export default function ConversationScreen() {
       if (params.intentData) {
         const intent = JSON.parse(params.intentData as string) as ParsedIntent;
         setParsedIntent(intent);
+
+        const initialMetadata: Record<string, unknown> = {};
+        if (intent.durationMinutes) {
+          initialMetadata.duration_minutes = intent.durationMinutes;
+          initialMetadata.detected_duration = intent.durationMinutes;
+        }
+        if (intent.activities && intent.activities.length > 0) {
+          initialMetadata.activities_mentioned = intent.activities;
+        }
+        if (intent.therapeuticGoals && intent.therapeuticGoals.length > 0) {
+          initialMetadata.therapeutic_goals_mentioned = intent.therapeuticGoals;
+        }
+
+        await updateSessionMetadata(session.id, initialMetadata);
         await sendInitialMessage(session.id, intent.rawText, intent);
       } else {
         await sendAIGreeting(session.id);
@@ -79,6 +130,20 @@ export default function ConversationScreen() {
 
     const greetingMessage = "Hi there! I'm here to help you create a personalized nature excursion.";
     await saveMessage(sessionId, 'assistant', greetingMessage);
+
+    const extractedInfo = extractInfoFromMessage(message);
+    const metadataUpdates: Record<string, unknown> = {};
+
+    if (extractedInfo.duration && !intent?.durationMinutes) {
+      metadataUpdates.duration_minutes = extractedInfo.duration;
+    }
+    if (extractedInfo.location) {
+      metadataUpdates.location_preference = extractedInfo.location;
+    }
+
+    if (Object.keys(metadataUpdates).length > 0) {
+      await updateSessionMetadata(sessionId, metadataUpdates);
+    }
 
     const conversationHistory: ChatMessage[] = [
       {
@@ -122,6 +187,20 @@ export default function ConversationScreen() {
     const userMessage = inputText.trim();
     setInputText('');
     setSending(true);
+
+    const extractedInfo = extractInfoFromMessage(userMessage);
+    const metadataUpdates: Record<string, unknown> = {};
+
+    if (extractedInfo.duration) {
+      metadataUpdates.duration_minutes = extractedInfo.duration;
+    }
+    if (extractedInfo.location) {
+      metadataUpdates.location_preference = extractedInfo.location;
+    }
+
+    if (Object.keys(metadataUpdates).length > 0) {
+      await updateSessionMetadata(sessionId, metadataUpdates);
+    }
 
     const conversationHistory: ChatMessage[] = messages.map((msg) => ({
       role: msg.role,

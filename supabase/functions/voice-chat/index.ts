@@ -180,6 +180,15 @@ async function generateResponse(transcript: string, conversationHistory: ChatMes
   }
 
   let systemPrompt = NATUREUP_SYSTEM_PROMPT;
+  const phase = (userContext?.phase as string) || 'health_coach';
+
+  if (phase === 'excursion_guiding') {
+    const excursionContext = userContext?.excursion_title as string || 'your excursion';
+    const currentStep = userContext?.current_step as number || 1;
+    const totalSteps = userContext?.total_steps as number || 0;
+
+    systemPrompt += `\n\nCURRENT CONTEXT:\nYou are providing real-time guidance during an active nature excursion: "${excursionContext}".\nProgress: Step ${currentStep}${totalSteps > 0 ? ` of ${totalSteps}` : ''}\n\nFocus on:\n- Real-time encouragement and mindfulness cues\n- Responding to what the user is experiencing right now\n- Safety awareness and pacing\n- Noticing their immediate surroundings\n- Keeping responses brief and conversational (1-2 sentences)`;
+  }
 
   if (userContext) {
     const activityPrefs = userContext.activity_preferences as string[] || [];
