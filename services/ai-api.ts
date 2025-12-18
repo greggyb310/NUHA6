@@ -1,7 +1,16 @@
 import type { AiRequest, AiResponse } from '@/types/ai';
+import Constants from 'expo-constants';
 
-const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL;
-const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+function getEnvVar(key: string): string {
+  return (
+    process.env[key] ||
+    Constants.expoConfig?.extra?.[key] ||
+    ''
+  );
+}
+
+const SUPABASE_URL = getEnvVar('EXPO_PUBLIC_SUPABASE_URL');
+const SUPABASE_ANON_KEY = getEnvVar('EXPO_PUBLIC_SUPABASE_ANON_KEY');
 
 export async function aiRun<T = unknown>(payload: AiRequest): Promise<AiResponse<T>> {
   const start = Date.now();

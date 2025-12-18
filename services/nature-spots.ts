@@ -1,4 +1,13 @@
 import { supabase } from './supabase';
+import Constants from 'expo-constants';
+
+function getEnvVar(key: string): string {
+  return (
+    process.env[key] ||
+    Constants.expoConfig?.extra?.[key] ||
+    ''
+  );
+}
 
 export interface NatureSpot {
   id: string;
@@ -92,10 +101,11 @@ export async function searchNatureSpotsNearby(
       }
     }
 
-    const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
-    const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+    const supabaseUrl = getEnvVar('EXPO_PUBLIC_SUPABASE_URL');
+    const supabaseAnonKey = getEnvVar('EXPO_PUBLIC_SUPABASE_ANON_KEY');
 
     if (!supabaseUrl || !supabaseAnonKey) {
+      console.error('Missing Supabase credentials for edge function call');
       throw new Error('Missing Supabase environment variables');
     }
 

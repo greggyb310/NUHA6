@@ -8,6 +8,10 @@
     "scheme": "natureup",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
+    "extra": {
+      "EXPO_PUBLIC_SUPABASE_URL": "https://vemmunswpooahgypvzbk.supabase.co",
+      "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZlbW11bnN3cG9vYWhneXB2emJrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU5MjQ1ODMsImV4cCI6MjA4MTUwMDU4M30.pkFvfEncR3y3Fkl_oubdf_nr90u6Uqg0fuhjJfLq_eU"
+    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.natureup.nearbyapp",

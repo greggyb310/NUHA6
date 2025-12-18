@@ -2,9 +2,18 @@ import { Audio } from 'expo-av';
 import * as FileSystem from 'expo-file-system/legacy';
 import { Platform } from 'react-native';
 import type { ChatMessage } from '@/types/ai';
+import Constants from 'expo-constants';
 
-const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL;
-const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+function getEnvVar(key: string): string {
+  return (
+    process.env[key] ||
+    Constants.expoConfig?.extra?.[key] ||
+    ''
+  );
+}
+
+const SUPABASE_URL = getEnvVar('EXPO_PUBLIC_SUPABASE_URL');
+const SUPABASE_ANON_KEY = getEnvVar('EXPO_PUBLIC_SUPABASE_ANON_KEY');
 
 export interface VoiceRecording {
   uri: string;

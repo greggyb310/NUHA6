@@ -1,4 +1,13 @@
 import { supabase } from './supabase';
+import Constants from 'expo-constants';
+
+function getEnvVar(key: string): string {
+  return (
+    process.env[key] ||
+    Constants.expoConfig?.extra?.[key] ||
+    ''
+  );
+}
 
 export interface WeatherData {
   temperature: number;
@@ -12,12 +21,20 @@ export interface WeatherData {
 
 export async function getCurrentWeather(latitude: number, longitude: number): Promise<WeatherData | null> {
   try {
-    const apiUrl = `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/current-weather`;
+    const supabaseUrl = getEnvVar('EXPO_PUBLIC_SUPABASE_URL');
+    const supabaseAnonKey = getEnvVar('EXPO_PUBLIC_SUPABASE_ANON_KEY');
+
+    if (!supabaseUrl || !supabaseAnonKey) {
+      console.error('Missing Supabase credentials for weather API');
+      return null;
+    }
+
+    const apiUrl = `${supabaseUrl}/functions/v1/current-weather`;
 
     const response = await fetch(apiUrl, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY}`,
+        'Authorization': `Bearer ${supabaseAnonKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ latitude, longitude }),

@@ -1,9 +1,20 @@
+import Constants from 'expo-constants';
+
+function getEnvVar(key: string): string {
+  return (
+    process.env[key] ||
+    Constants.expoConfig?.extra?.[key] ||
+    ''
+  );
+}
+
 export async function textToSpeech(text: string): Promise<string | null> {
   try {
-    const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
-    const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+    const supabaseUrl = getEnvVar('EXPO_PUBLIC_SUPABASE_URL');
+    const supabaseAnonKey = getEnvVar('EXPO_PUBLIC_SUPABASE_ANON_KEY');
 
     if (!supabaseUrl || !supabaseAnonKey) {
+      console.error('Missing Supabase credentials for TTS');
       throw new Error('Missing Supabase environment variables');
     }
 
