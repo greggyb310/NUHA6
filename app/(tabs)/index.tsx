@@ -1,11 +1,10 @@
-import { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, ImageBackground, Image, ActivityIndicator, ImageSourcePropType, TouchableOpacity, ScrollView, TextInput, KeyboardAvoidingView, Platform, Keyboard } from 'react-native';
+import { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ImageBackground, Image, ActivityIndicator, ImageSourcePropType, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import { supabase } from '@/services/supabase';
 import { LinearGradient } from 'expo-linear-gradient';
-import { MessageCircle, Send } from 'lucide-react-native';
-import { sendMessage as sendChatMessage, getOrCreateSession, getSession, type ConversationPhase } from '@/services/chat';
-import type { ChatMessage } from '@/types/ai';
+import { Compass } from 'lucide-react-native';
 
 const IMAGE_MAP: Record<string, ImageSourcePropType> = {
   'img_1335_medium.jpeg': require('@/assets/images/img_1335_medium.jpeg'),
@@ -34,37 +33,16 @@ interface InspirationQuote {
   author: string | null;
 }
 
-interface Message {
-  id: string;
-  role: 'user' | 'assistant';
-  content: string;
-}
-
-const getFirstTimeGreeting = (name?: string) => {
-  const greeting = name ? `Hi ${name}!` : "Hi!";
-  return `${greeting} Ready to explore nature?`;
-};
-
-const getReturningGreeting = (name?: string) => {
-  const greeting = name ? `Hi ${name}!` : "Hi!";
-  return `${greeting} What would you like to do today?`;
-};
-
 export default function HomeScreen() {
+  const router = useRouter();
   const [photo, setPhoto] = useState<InspirationPhoto | null>(null);
   const [quote, setQuote] = useState<InspirationQuote | null>(null);
   const [loading, setLoading] = useState(true);
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [inputText, setInputText] = useState('');
-  const [sending, setSending] = useState(false);
-  const [sessionId, setSessionId] = useState<string | null>(null);
-  const [sessionPhase, setSessionPhase] = useState<ConversationPhase>('initial_chat');
-  const scrollViewRef = useRef<ScrollView>(null);
-  const inputRef = useRef<TextInput>(null);
+  const [userName, setUserName] = useState<string | null>(null);
 
   useEffect(() => {
     fetchInspiration();
-    initializeChat();
+    fetchUserName();
   }, []);
 
   const fetchInspiration = async () => {
@@ -99,113 +77,27 @@ export default function HomeScreen() {
     }
   };
 
-  const initializeChat = async () => {
+  const fetchUserName = async () => {
     try {
-      const session = await getOrCreateSession('health_coach');
-      if (session) {
-        setSessionId(session.id);
-        setSessionPhase(session.phase);
-      }
-
       const { data: { user } } = await supabase.auth.getUser();
-      let greeting = getFirstTimeGreeting();
-
       if (user) {
         const { data: profile } = await supabase
           .from('user_profiles')
-          .select('chat_session_count, full_name')
+          .select('full_name')
           .eq('user_id', user.id)
           .maybeSingle();
 
-        const currentCount = profile?.chat_session_count || 0;
-        const userName = profile?.full_name;
-
-        if (currentCount === 0) {
-          greeting = getFirstTimeGreeting(userName);
-        } else {
-          greeting = getReturningGreeting(userName);
+        if (profile?.full_name) {
+          setUserName(profile.full_name.split(' ')[0]);
         }
-
-        await supabase
-          .from('user_profiles')
-          .update({ chat_session_count: currentCount + 1 })
-          .eq('user_id', user.id);
       }
-
-      setMessages([{ id: '0', role: 'assistant', content: greeting }]);
     } catch (error) {
-      console.error('Error initializing chat session:', error);
-      setMessages([{ id: '0', role: 'assistant', content: getFirstTimeGreeting() }]);
+      console.error('Error fetching user name:', error);
     }
   };
 
-  const scrollToBottom = () => {
-    setTimeout(() => {
-      scrollViewRef.current?.scrollToEnd({ animated: true });
-    }, 100);
-  };
-
-  const handleSend = async () => {
-    if (!inputText.trim() || sending) return;
-
-    const userMessage = inputText.trim();
-    setInputText('');
-    Keyboard.dismiss();
-
-    const newUserMessage: Message = {
-      id: Date.now().toString(),
-      role: 'user',
-      content: userMessage,
-    };
-
-    setMessages(prev => [...prev, newUserMessage]);
-    scrollToBottom();
-    setSending(true);
-
-    try {
-      const conversationHistory: ChatMessage[] = messages.map(msg => ({
-        role: msg.role,
-        content: msg.content,
-      }));
-
-      if (sessionId) {
-        const result = await sendChatMessage(sessionId, userMessage, conversationHistory);
-
-        if (result.reply) {
-          const assistantMessage: Message = {
-            id: (Date.now() + 1).toString(),
-            role: 'assistant',
-            content: result.reply,
-          };
-          setMessages(prev => [...prev, assistantMessage]);
-          scrollToBottom();
-
-          const updatedSession = await getSession(sessionId);
-          if (updatedSession) {
-            setSessionPhase(updatedSession.phase);
-          }
-        }
-      } else {
-        const assistantMessage: Message = {
-          id: (Date.now() + 1).toString(),
-          role: 'assistant',
-          content: "I'd be happy to help you plan a nature experience! Tell me more about what you're looking for.",
-        };
-        setMessages(prev => [...prev, assistantMessage]);
-        scrollToBottom();
-      }
-    } catch (error) {
-      console.error('Error sending message:', error);
-      const errorMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content: "I'm having trouble connecting right now. Would you like to tell me more about your ideal nature experience?",
-      };
-      setMessages(prev => [...prev, errorMessage]);
-      scrollToBottom();
-    } finally {
-      setSending(false);
-    }
+  const handleCreateExcursion = () => {
+    router.push('/explore/create');
   };
 
   const backgroundImage = photo && IMAGE_MAP[photo.image_url]
@@ -219,7 +111,7 @@ export default function HomeScreen() {
       resizeMode="cover"
     >
       <LinearGradient
-        colors={['rgba(0,0,0,0.7)', 'rgba(0,0,0,0.3)', 'rgba(0,0,0,0.7)']}
+        colors={['rgba(0,0,0,0.6)', 'rgba(0,0,0,0.3)', 'rgba(0,0,0,0.6)']}
         style={styles.gradient}
       >
         <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
@@ -232,79 +124,22 @@ export default function HomeScreen() {
               />
             </View>
             <Text style={styles.heroTitle}>NatureUp Health</Text>
-            <Text style={styles.welcomeText}>Partnering with Nature</Text>
+            <Text style={styles.tagline}>Partnering with Nature</Text>
           </View>
 
           <View style={styles.centerSection}>
-            <KeyboardAvoidingView
-              style={styles.chatContainer}
-              behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            <Text style={styles.welcomeText}>
+              {userName ? `Welcome, ${userName}` : 'Welcome'}
+            </Text>
+
+            <TouchableOpacity
+              style={styles.createButton}
+              onPress={handleCreateExcursion}
+              activeOpacity={0.8}
             >
-              <View style={styles.chatCard}>
-                <View style={styles.chatHeader}>
-                  <MessageCircle size={20} color="#4A7C2E" />
-                  <Text style={styles.chatHeaderTitle}>
-                    {sessionPhase === 'excursion_planning' ? 'Excursion Planning' : 'Nature Guide'}
-                  </Text>
-                </View>
-
-                <ScrollView
-                  ref={scrollViewRef}
-                  style={styles.messagesContainer}
-                  contentContainerStyle={styles.messagesContent}
-                  onContentSizeChange={scrollToBottom}
-                  keyboardShouldPersistTaps="handled"
-                >
-                  {messages.map((message) => (
-                    <View
-                      key={message.id}
-                      style={[
-                        styles.messageBubble,
-                        message.role === 'user' ? styles.userBubble : styles.assistantBubble,
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          styles.messageText,
-                          message.role === 'user' ? styles.userText : styles.assistantText,
-                        ]}
-                      >
-                        {message.content}
-                      </Text>
-                    </View>
-                  ))}
-                  {sending && (
-                    <View style={[styles.messageBubble, styles.assistantBubble]}>
-                      <ActivityIndicator size="small" color="#4A7C2E" />
-                    </View>
-                  )}
-                </ScrollView>
-
-                <View style={styles.inputContainer}>
-                  <TextInput
-                    ref={inputRef}
-                    style={styles.input}
-                    value={inputText}
-                    onChangeText={setInputText}
-                    placeholder="Tell me what you're looking for..."
-                    placeholderTextColor="rgba(45, 62, 31, 0.5)"
-                    multiline
-                    maxLength={500}
-                    editable={!sending}
-                    onSubmitEditing={handleSend}
-                    blurOnSubmit={false}
-                  />
-                  <TouchableOpacity
-                    style={[styles.sendButton, (!inputText.trim() || sending) && styles.sendButtonDisabled]}
-                    onPress={handleSend}
-                    disabled={!inputText.trim() || sending}
-                    activeOpacity={0.7}
-                  >
-                    <Send size={18} color="#FFFFFF" />
-                  </TouchableOpacity>
-                </View>
-              </View>
-            </KeyboardAvoidingView>
+              <Compass size={24} color="#FFFFFF" />
+              <Text style={styles.createButtonText}>Create Excursion</Text>
+            </TouchableOpacity>
           </View>
 
           <View style={styles.bottomSection}>
@@ -375,7 +210,7 @@ const styles = StyleSheet.create({
     textShadowRadius: 3,
     marginBottom: 4,
   },
-  welcomeText: {
+  tagline: {
     fontSize: 16,
     fontWeight: '500',
     color: '#FFFFFF',
@@ -389,103 +224,36 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 32,
+    gap: 32,
   },
-  chatContainer: {
-    width: '100%',
+  welcomeText: {
+    fontSize: 42,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    textAlign: 'center',
+    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 6,
   },
-  chatCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    borderRadius: 24,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.25)',
-  },
-  chatHeader: {
+  createButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    backgroundColor: 'rgba(232, 245, 233, 0.25)',
-    gap: 8,
+    backgroundColor: '#4A7C2E',
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    borderRadius: 30,
+    gap: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 5,
   },
-  chatHeaderTitle: {
-    fontSize: 15,
+  createButtonText: {
+    fontSize: 18,
     fontWeight: '600',
     color: '#FFFFFF',
-    textShadowColor: 'rgba(0, 0, 0, 0.5)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
-  },
-  messagesContainer: {
-    maxHeight: 240,
-  },
-  messagesContent: {
-    padding: 12,
-    paddingBottom: 8,
-  },
-  messageBubble: {
-    maxWidth: '85%',
-    marginBottom: 8,
-    padding: 12,
-    borderRadius: 16,
-  },
-  userBubble: {
-    alignSelf: 'flex-end',
-    backgroundColor: 'rgba(74, 124, 46, 0.9)',
-    borderBottomRightRadius: 4,
-  },
-  assistantBubble: {
-    alignSelf: 'flex-start',
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    borderBottomLeftRadius: 4,
-  },
-  messageText: {
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  userText: {
-    color: '#FFFFFF',
-  },
-  assistantText: {
-    color: '#2D3E1F',
-  },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    backgroundColor: 'rgba(0, 0, 0, 0.15)',
-    gap: 8,
-  },
-  input: {
-    flex: 1,
-    minHeight: 40,
-    maxHeight: 100,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    borderRadius: 20,
-    fontSize: 14,
-    color: '#2D3E1F',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
-  },
-  sendButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#4A7C2E',
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3,
-    elevation: 3,
-  },
-  sendButtonDisabled: {
-    opacity: 0.5,
   },
   bottomSection: {
     paddingBottom: 16,
