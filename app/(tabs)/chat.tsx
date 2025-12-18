@@ -29,7 +29,9 @@ interface Message {
   content: string;
 }
 
-const BASE_GREETING = "Hi there! I'm your nature wellness guide. I can help you plan a personalized outdoor experience based on how you're feeling today. What kind of nature experience are you looking for? You can tell me things like how much time you have, what activities interest you, or what you'd like to get out of your time outdoors.";
+const FIRST_TIME_GREETING = "Hi! I'm your nature wellness guide. I can help you plan a personalized outdoor experience based on how you're feeling today. What kind of nature experience are you looking for? You can tell me things like how much time you have, what activities interest you, or what you'd like to get out of your time outdoors.\n\nOr tap the Create icon below to build your excursion with more options.";
+
+const RETURNING_GREETING = "Hi! Just a couple quick questions and we'll have your excursion ready.";
 
 const CREATE_TAB_HINT = "\n\nOr tap the Create icon below to build your excursion with more options.";
 
@@ -57,7 +59,7 @@ export default function ChatScreen() {
       }
 
       const { data: { user } } = await supabase.auth.getUser();
-      let showHint = true;
+      let greeting = FIRST_TIME_GREETING;
 
       if (user) {
         const { data: profile } = await supabase
@@ -67,7 +69,14 @@ export default function ChatScreen() {
           .maybeSingle();
 
         const currentCount = profile?.chat_session_count || 0;
-        showHint = currentCount < 4;
+
+        if (currentCount === 0) {
+          greeting = FIRST_TIME_GREETING;
+        } else if (currentCount < 4) {
+          greeting = RETURNING_GREETING + CREATE_TAB_HINT;
+        } else {
+          greeting = RETURNING_GREETING;
+        }
 
         await supabase
           .from('user_profiles')
@@ -75,11 +84,10 @@ export default function ChatScreen() {
           .eq('user_id', user.id);
       }
 
-      const greeting = showHint ? BASE_GREETING + CREATE_TAB_HINT : BASE_GREETING;
       setMessages([{ id: '0', role: 'assistant', content: greeting }]);
     } catch (error) {
       console.error('Error initializing chat session:', error);
-      setMessages([{ id: '0', role: 'assistant', content: BASE_GREETING }]);
+      setMessages([{ id: '0', role: 'assistant', content: FIRST_TIME_GREETING }]);
     }
   };
 
