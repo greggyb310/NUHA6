@@ -13,11 +13,12 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import * as Location from 'expo-location';
-import { ChevronDown, Check, Sun, CloudRain, Cloud, Wind } from 'lucide-react-native';
+import { ChevronDown, Check, Sun, CloudRain, Cloud, Wind, MapPin, Sparkles } from 'lucide-react-native';
 import { supabase } from '@/services/supabase';
 import { getCurrentWeather, type WeatherData } from '@/services/weather';
 import { getExcursionPlan } from '@/services/ai';
 import { searchNatureSpotsNearby } from '@/services/nature-spots';
+import { getCachedLocationData } from '@/services/location-preload';
 import { LoadingScreen } from '@/components/loading-screen';
 
 const ENERGY_LEVEL_OPTIONS = [
@@ -63,7 +64,16 @@ const DURATION_OPTIONS = [
   { value: 120, label: '2 hours' },
 ];
 
+function getSearchRadiusForDuration(durationMinutes: number): number {
+  if (durationMinutes <= 15) return 3;
+  if (durationMinutes <= 30) return 5;
+  if (durationMinutes <= 60) return 10;
+  if (durationMinutes <= 90) return 15;
+  return 20;
+}
+
 type ModalType = 'energyLevel' | 'riskTolerance' | 'duration' | 'activities' | 'therapeutic' | null;
+type LocationChoice = 'suggest' | 'custom' | null;
 
 export default function CreateExcursionScreen() {
   const [energyLevel, setEnergyLevel] = useState('medium');
@@ -75,27 +85,35 @@ export default function CreateExcursionScreen() {
   const [activeModal, setActiveModal] = useState<ModalType>(null);
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
   const [weather, setWeather] = useState<WeatherData | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [showDelayedLoader, setShowDelayedLoader] = useState(false);
+  const [loadingWeather, setLoadingWeather] = useState(false);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [nearbySpots, setNearbySpots] = useState<number>(0);
+  const [locationChoice, setLocationChoice] = useState<LocationChoice>(null);
+  const [customLocationName, setCustomLocationName] = useState('');
 
   useEffect(() => {
     loadLocationAndWeather();
   }, []);
 
   const loadLocationAndWeather = async () => {
-    const delayTimer = setTimeout(() => {
-      setShowDelayedLoader(true);
-    }, 500);
-
     try {
+      const cachedData = getCachedLocationData();
+
+      if (cachedData) {
+        setLocation(cachedData.location);
+        setLoadingWeather(true);
+        const weatherData = await getCurrentWeather(
+          cachedData.location.coords.latitude,
+          cachedData.location.coords.longitude
+        );
+        setWeather(weatherData);
+        setLoadingWeather(false);
+        return;
+      }
+
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
-        setError('Location permission is required to find nearby nature spots.');
-        clearTimeout(delayTimer);
-        setShowDelayedLoader(false);
+        setError('Location permission is needed for suggestions. You can still enter a custom location.');
         return;
       }
 
@@ -104,32 +122,17 @@ export default function CreateExcursionScreen() {
       });
       setLocation(currentLocation);
 
-      const [weatherData, nearbyResult] = await Promise.all([
-        getCurrentWeather(
-          currentLocation.coords.latitude,
-          currentLocation.coords.longitude
-        ),
-        searchNatureSpotsNearby(
-          currentLocation.coords.latitude,
-          currentLocation.coords.longitude,
-          10
-        ),
-      ]);
-
+      setLoadingWeather(true);
+      const weatherData = await getCurrentWeather(
+        currentLocation.coords.latitude,
+        currentLocation.coords.longitude
+      );
       setWeather(weatherData);
-      setNearbySpots(nearbyResult.places?.length || 0);
-
-      if (!nearbyResult.places || nearbyResult.places.length === 0) {
-        setError('No nearby nature spots found. Do you know anywhere we can do this? Try moving to a different location or adjusting your preferences.');
-      }
-
-      clearTimeout(delayTimer);
-      setShowDelayedLoader(false);
+      setLoadingWeather(false);
     } catch (err) {
       console.error('Error loading location:', err);
-      setError('Unable to get your location. Please try again.');
-      clearTimeout(delayTimer);
-      setShowDelayedLoader(false);
+      setError('Unable to get your location. You can still enter a custom location.');
+      setLoadingWeather(false);
     }
   };
 
@@ -183,8 +186,13 @@ export default function CreateExcursionScreen() {
   };
 
   const handleCreate = async () => {
-    if (!location) {
-      setError('Location is required to create an excursion.');
+    if (locationChoice === 'custom' && !customLocationName.trim()) {
+      setError('Please enter a location name.');
+      return;
+    }
+
+    if (locationChoice === 'suggest' && !location) {
+      setError('Location is required. Please allow location access or enter a custom location.');
       return;
     }
 
@@ -199,39 +207,61 @@ export default function CreateExcursionScreen() {
         return;
       }
 
-      const nearbyResult = await searchNatureSpotsNearby(
-        location.coords.latitude,
-        location.coords.longitude,
-        10
-      );
+      let nearbyPlaces: Array<{
+        name: string;
+        lat: number;
+        lng: number;
+        type: string;
+        difficulty?: string;
+        star_rating?: number;
+      }> = [];
 
-      const nearbyPlaces = nearbyResult.places?.map((place) => ({
-        name: place.name,
-        lat: place.latitude,
-        lng: place.longitude,
-        type: place.type,
-        difficulty: place.difficulty,
-        star_rating: place.star_rating,
-      })) || [];
+      if (locationChoice === 'custom') {
+        nearbyPlaces = [{
+          name: customLocationName.trim(),
+          lat: location?.coords.latitude || 0,
+          lng: location?.coords.longitude || 0,
+          type: 'custom',
+        }];
+      } else if (location) {
+        const searchRadius = getSearchRadiusForDuration(duration);
+        const nearbyResult = await searchNatureSpotsNearby(
+          location.coords.latitude,
+          location.coords.longitude,
+          searchRadius
+        );
 
-      if (nearbyPlaces.length === 0) {
-        setError('No nature spots found nearby. Try a different location.');
-        setCreating(false);
-        return;
+        nearbyPlaces = nearbyResult.places?.map((place) => ({
+          name: place.name,
+          lat: place.latitude,
+          lng: place.longitude,
+          type: place.type,
+          difficulty: place.difficulty,
+          star_rating: place.star_rating,
+        })) || [];
+
+        if (nearbyPlaces.length === 0) {
+          setError("I couldn't find any nature spots nearby. Do you know somewhere we can go? Enter a location name below.");
+          setLocationChoice('custom');
+          setCreating(false);
+          return;
+        }
       }
 
       const result = await getExcursionPlan({
-        userLocation: {
+        userLocation: location ? {
           lat: location.coords.latitude,
           lng: location.coords.longitude,
-        },
+        } : { lat: 0, lng: 0 },
         durationMinutes: duration,
         preferences: {
           activities: selectedActivities,
           therapeutic: selectedTherapeutic,
           riskTolerance: riskTolerance,
           energyLevel: energyLevel,
-          additionalNotes: additionalNotes,
+          additionalNotes: locationChoice === 'custom'
+            ? `User wants to go to: ${customLocationName}. ${additionalNotes}`
+            : additionalNotes,
           weather: weather ? {
             temp: weather.temperature,
             condition: weather.description,
@@ -248,8 +278,8 @@ export default function CreateExcursionScreen() {
 
       const excursionData = result.result;
       const destination = excursionData.destination!;
-      const startLat = location.coords.latitude;
-      const startLng = location.coords.longitude;
+      const startLat = location?.coords.latitude || destination.lat;
+      const startLng = location?.coords.longitude || destination.lng;
       const destLat = destination.lat;
       const destLng = destination.lng;
 
@@ -295,8 +325,8 @@ export default function CreateExcursionScreen() {
         pathname: '/(tabs)/explore/excursion-detail',
         params: {
           id: insertedData.id,
-          userLat: location.coords.latitude.toString(),
-          userLng: location.coords.longitude.toString(),
+          userLat: startLat.toString(),
+          userLng: startLng.toString(),
         },
       });
     } catch (err) {
@@ -310,6 +340,8 @@ export default function CreateExcursionScreen() {
     return <LoadingScreen message="Creating your personalized nature experience..." />;
   }
 
+  const canCreate = locationChoice !== null && (locationChoice === 'suggest' ? !!location : customLocationName.trim().length > 0);
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
@@ -317,7 +349,7 @@ export default function CreateExcursionScreen() {
       </View>
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
-        {showDelayedLoader && !weather && (
+        {loadingWeather && (
           <View style={styles.weatherCard}>
             <View style={styles.weatherLeft}>
               <ActivityIndicator size="small" color="#4A7C2E" />
@@ -326,17 +358,76 @@ export default function CreateExcursionScreen() {
           </View>
         )}
 
-        {weather && (
+        {weather && !loadingWeather && (
           <View style={styles.weatherCard}>
             <View style={styles.weatherLeft}>
               {getWeatherIcon()}
-              <Text style={styles.weatherTemp}>{Math.round(weather.temperature)}°F</Text>
+              <Text style={styles.weatherTemp}>{Math.round(weather.temperature)}F</Text>
             </View>
             <TouchableOpacity style={styles.forecastLink}>
-              <Text style={styles.forecastText}>Hourly forecast →</Text>
+              <Text style={styles.forecastText}>Hourly forecast</Text>
             </TouchableOpacity>
           </View>
         )}
+
+        <View style={styles.locationSection}>
+          <Text style={styles.sectionLabel}>Where would you like to go?</Text>
+          <Text style={styles.sectionSubtext}>Do you have a place in mind, or would you like suggestions?</Text>
+
+          <View style={styles.locationChoices}>
+            <TouchableOpacity
+              style={[
+                styles.locationChoice,
+                locationChoice === 'suggest' && styles.locationChoiceSelected,
+                !location && styles.locationChoiceDisabled,
+              ]}
+              onPress={() => location && setLocationChoice('suggest')}
+              activeOpacity={0.7}
+              disabled={!location}
+            >
+              <Sparkles size={24} color={locationChoice === 'suggest' ? '#FFFFFF' : '#4A7C2E'} />
+              <Text style={[
+                styles.locationChoiceText,
+                locationChoice === 'suggest' && styles.locationChoiceTextSelected,
+              ]}>
+                Suggest somewhere
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.locationChoice,
+                locationChoice === 'custom' && styles.locationChoiceSelected,
+              ]}
+              onPress={() => setLocationChoice('custom')}
+              activeOpacity={0.7}
+            >
+              <MapPin size={24} color={locationChoice === 'custom' ? '#FFFFFF' : '#4A7C2E'} />
+              <Text style={[
+                styles.locationChoiceText,
+                locationChoice === 'custom' && styles.locationChoiceTextSelected,
+              ]}>
+                I have a place in mind
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {locationChoice === 'custom' && (
+            <TextInput
+              style={styles.customLocationInput}
+              value={customLocationName}
+              onChangeText={setCustomLocationName}
+              placeholder="Enter park, trail, or nature spot name..."
+              placeholderTextColor="#999"
+            />
+          )}
+
+          {!location && (
+            <Text style={styles.locationWarning}>
+              Enable location access for personalized suggestions, or enter a custom location.
+            </Text>
+          )}
+        </View>
 
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>Duration</Text>
@@ -426,14 +517,12 @@ export default function CreateExcursionScreen() {
 
       <View style={styles.footer}>
         <TouchableOpacity
-          style={[styles.createButton, (!location || nearbySpots === 0) && styles.createButtonDisabled]}
+          style={[styles.createButton, !canCreate && styles.createButtonDisabled]}
           onPress={handleCreate}
-          disabled={!location || nearbySpots === 0}
+          disabled={!canCreate}
           activeOpacity={0.8}
         >
-          <Text style={styles.createButtonText}>
-            {!location ? 'Loading location...' : 'Create Experience'}
-          </Text>
+          <Text style={styles.createButtonText}>Create Experience</Text>
         </TouchableOpacity>
       </View>
 
@@ -630,7 +719,6 @@ const styles = StyleSheet.create({
   weatherLoadingText: {
     fontSize: 16,
     color: '#5A6C4A',
-    marginLeft: 8,
   },
   weatherTemp: {
     fontSize: 32,
@@ -644,6 +732,63 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#4A7C2E',
+  },
+  locationSection: {
+    marginBottom: 24,
+  },
+  sectionSubtext: {
+    fontSize: 14,
+    color: '#5A6C4A',
+    marginBottom: 16,
+  },
+  locationChoices: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  locationChoice: {
+    flex: 1,
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 2,
+    borderColor: '#E5E7EB',
+    gap: 8,
+    minHeight: 100,
+  },
+  locationChoiceSelected: {
+    backgroundColor: '#4A7C2E',
+    borderColor: '#4A7C2E',
+  },
+  locationChoiceDisabled: {
+    opacity: 0.5,
+  },
+  locationChoiceText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#2D3E1F',
+    textAlign: 'center',
+  },
+  locationChoiceTextSelected: {
+    color: '#FFFFFF',
+  },
+  customLocationInput: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 16,
+    fontSize: 16,
+    color: '#2D3E1F',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    marginTop: 16,
+  },
+  locationWarning: {
+    fontSize: 13,
+    color: '#B45309',
+    marginTop: 12,
+    textAlign: 'center',
   },
   section: {
     marginBottom: 20,
