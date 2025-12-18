@@ -1,5 +1,5 @@
 import { Tabs } from 'expo-router';
-import { Home, PenSquare, User, MapPin, ShoppingBag } from 'lucide-react-native';
+import { Home, User, ShoppingBag } from 'lucide-react-native';
 
 export default function TabLayout() {
   return (
@@ -25,10 +25,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="create"
         options={{
-          title: 'Create',
-          tabBarIcon: ({ size, color }) => (
-            <PenSquare size={size} color={color} />
-          ),
+          href: null,
         }}
       />
       <Tabs.Screen
