@@ -4,14 +4,12 @@ import { StatusBar } from 'expo-status-bar';
 import { useFrameworkReady } from '@/hooks/useFrameworkReady';
 import { getCurrentUser } from '@/services/auth';
 import { supabase } from '@/services/supabase';
-import { SplashScreen } from '@/components/splash-screen';
 
 export default function RootLayout() {
   useFrameworkReady();
   const router = useRouter();
   const segments = useSegments();
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
-  const [showSplash, setShowSplash] = useState(true);
 
   useEffect(() => {
     checkAuth();
@@ -26,7 +24,7 @@ export default function RootLayout() {
   }, []);
 
   useEffect(() => {
-    if (isAuthenticated === null || showSplash) {
+    if (isAuthenticated === null) {
       return;
     }
 
@@ -55,19 +53,15 @@ export default function RootLayout() {
       console.log('Redirecting to tabs (authenticated but not in allowed route)');
       router.replace('/(tabs)');
     }
-  }, [isAuthenticated, segments, showSplash]);
+  }, [isAuthenticated, segments]);
 
   const checkAuth = async () => {
     const user = await getCurrentUser();
     setIsAuthenticated(!!user);
   };
 
-  const handleSplashComplete = () => {
-    setShowSplash(false);
-  };
-
-  if (isAuthenticated === null || showSplash) {
-    return <SplashScreen onComplete={handleSplashComplete} />;
+  if (isAuthenticated === null) {
+    return null;
   }
 
   return (
