@@ -1,11 +1,10 @@
 import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ImageBackground, Image, ActivityIndicator, ImageSourcePropType, TouchableOpacity, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, StyleSheet, ImageBackground, Image, ActivityIndicator, ImageSourcePropType, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { supabase } from '@/services/supabase';
 import { LinearGradient } from 'expo-linear-gradient';
-import { MessageCircle, Send } from 'lucide-react-native';
-import { parseIntent } from '@/services/intent-parser';
+import { MessageCircle } from 'lucide-react-native';
 
 const IMAGE_MAP: Record<string, ImageSourcePropType> = {
   'img_1335_medium.jpeg': require('@/assets/images/img_1335_medium.jpeg'),
@@ -39,7 +38,6 @@ export default function HomeScreen() {
   const [photo, setPhoto] = useState<InspirationPhoto | null>(null);
   const [quote, setQuote] = useState<InspirationQuote | null>(null);
   const [loading, setLoading] = useState(true);
-  const [message, setMessage] = useState('');
 
   useEffect(() => {
     fetchInspiration();
@@ -81,101 +79,67 @@ export default function HomeScreen() {
     ? IMAGE_MAP[photo.image_url]
     : require('@/assets/images/img_6096_large_medium.jpeg');
 
-  const handleSendMessage = () => {
-    if (message.trim()) {
-      const parsedIntent = parseIntent(message.trim());
-      console.log('Home screen - Parsed intent:', parsedIntent);
-      const intentData = JSON.stringify(parsedIntent);
-      console.log('Home screen - Navigating to conversation with intentData:', intentData);
-
-      setMessage('');
-
-      router.push({
-        pathname: '/conversation',
-        params: { intentData },
-      });
-    }
+  const handleStartChat = () => {
+    router.push('/(tabs)/chat');
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    <ImageBackground
+      source={backgroundImage}
+      style={styles.backgroundImage}
+      resizeMode="cover"
     >
-      <ImageBackground
-        source={backgroundImage}
-        style={styles.backgroundImage}
-        resizeMode="cover"
+      <LinearGradient
+        colors={['rgba(0,0,0,0.7)', 'rgba(0,0,0,0.3)', 'rgba(0,0,0,0.7)']}
+        style={styles.gradient}
       >
-        <LinearGradient
-          colors={['rgba(0,0,0,0.7)', 'rgba(0,0,0,0.3)', 'rgba(0,0,0,0.7)']}
-          style={styles.gradient}
-        >
-          <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
-            <View style={styles.topSection}>
-              <View style={styles.logoContainer}>
-                <Image
-                  source={require('@/assets/images/natureup_health_logo_-_green_bkgd.jpeg')}
-                  style={styles.logo}
-                  resizeMode="contain"
-                />
+        <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+          <View style={styles.topSection}>
+            <View style={styles.logoContainer}>
+              <Image
+                source={require('@/assets/images/natureup_health_logo_-_green_bkgd.jpeg')}
+                style={styles.logo}
+                resizeMode="contain"
+              />
+            </View>
+            <Text style={styles.heroTitle}>NatureUp Health</Text>
+            <Text style={styles.welcomeText}>Partnering with Nature</Text>
+          </View>
+
+          <View style={styles.centerSection}>
+            <TouchableOpacity
+              style={styles.chatButton}
+              onPress={handleStartChat}
+              activeOpacity={0.8}
+            >
+              <MessageCircle size={28} color="#FFFFFF" />
+              <Text style={styles.chatButtonText}>Let's talk</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.bottomSection}>
+            {loading ? (
+              <ActivityIndicator size="large" color="#FFFFFF" />
+            ) : quote ? (
+              <View style={styles.quoteContainer}>
+                <Text style={styles.quoteText}>"{quote.quote_text}"</Text>
+                {quote.author && (
+                  <Text style={styles.quoteAuthor}>- {quote.author}</Text>
+                )}
               </View>
-              <Text style={styles.heroTitle}>NatureUp Health</Text>
-              <Text style={styles.welcomeText}>Partnering with Nature</Text>
-            </View>
+            ) : null}
 
-            <View style={styles.centerSection}>
-              {loading ? (
-                <ActivityIndicator size="large" color="#FFFFFF" />
-              ) : quote ? (
-                <View style={styles.quoteContainer}>
-                  <Text style={styles.quoteText}>"{quote.quote_text}"</Text>
-                  {quote.author && (
-                    <Text style={styles.quoteAuthor}>— {quote.author}</Text>
-                  )}
-                </View>
-              ) : null}
-            </View>
-
-            <View style={styles.bottomSection}>
-              <View style={styles.chatInputContainer}>
-                <TextInput
-                  style={styles.chatInput}
-                  placeholder="Let's talk ~"
-                  placeholderTextColor="rgba(255, 255, 255, 0.6)"
-                  value={message}
-                  onChangeText={setMessage}
-                  onSubmitEditing={handleSendMessage}
-                  returnKeyType="send"
-                  multiline
-                  numberOfLines={3}
-                  maxLength={200}
-                  textAlignVertical="center"
-                />
-                <TouchableOpacity
-                  style={styles.sendButton}
-                  onPress={handleSendMessage}
-                  disabled={!message.trim()}
-                >
-                  <Send size={20} color={message.trim() ? "#FFFFFF" : "rgba(255, 255, 255, 0.5)"} />
-                </TouchableOpacity>
-              </View>
-
-              {photo?.photographer && (
-                <Text style={styles.photoCredit}>Photo by {photo.photographer}</Text>
-              )}
-            </View>
-          </SafeAreaView>
-        </LinearGradient>
-      </ImageBackground>
-    </KeyboardAvoidingView>
+            {photo?.photographer && (
+              <Text style={styles.photoCredit}>Photo by {photo.photographer}</Text>
+            )}
+          </View>
+        </SafeAreaView>
+      </LinearGradient>
+    </ImageBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
   backgroundImage: {
     flex: 1,
     width: '100%',
@@ -235,84 +199,61 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 32,
-    gap: 32,
+  },
+  chatButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(74, 124, 46, 0.9)',
+    paddingVertical: 18,
+    paddingHorizontal: 36,
+    borderRadius: 32,
+    gap: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  chatButtonText: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  bottomSection: {
+    paddingBottom: 16,
+    paddingHorizontal: 24,
+    gap: 12,
   },
   quoteContainer: {
     backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    borderRadius: 20,
-    padding: 28,
+    borderRadius: 16,
+    padding: 20,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.3)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 5,
   },
   quoteText: {
-    fontSize: 20,
-    lineHeight: 32,
+    fontSize: 16,
+    lineHeight: 24,
     color: '#FFFFFF',
     fontStyle: 'italic',
     textAlign: 'center',
-    marginBottom: 16,
+    marginBottom: 8,
     textShadowColor: 'rgba(0, 0, 0, 0.75)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 3,
     fontWeight: '500',
   },
   quoteAuthor: {
-    fontSize: 16,
+    fontSize: 14,
     color: '#FFFFFF',
     fontWeight: '600',
     textAlign: 'center',
     textShadowColor: 'rgba(0, 0, 0, 0.75)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 3,
-  },
-  bottomSection: {
-    paddingBottom: 12,
-    paddingHorizontal: 24,
-    gap: 12,
-  },
-  chatInputContainer: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    borderRadius: 28,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
-    paddingHorizontal: 20,
-    paddingVertical: 8,
-    gap: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-  chatInput: {
-    flex: 1,
-    fontSize: 16,
-    color: '#FFFFFF',
-    fontWeight: '500',
-    minHeight: 40,
-    maxHeight: 100,
-    paddingTop: 10,
-    paddingBottom: 10,
-  },
-  sendButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#4A7C2E',
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 3,
   },
   photoCredit: {
     fontSize: 11,
@@ -321,25 +262,5 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 2,
     alignSelf: 'flex-end',
-  },
-  createButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#4A7C2E',
-    paddingVertical: 16,
-    paddingHorizontal: 32,
-    borderRadius: 30,
-    gap: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-  createButtonText: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#FFFFFF',
   },
 });

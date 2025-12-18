@@ -12,277 +12,170 @@ import {
   Keyboard,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router, useLocalSearchParams } from 'expo-router';
+import { router } from 'expo-router';
 import * as Location from 'expo-location';
 import { supabase } from '@/services/supabase';
 import { getCurrentWeather, type WeatherData } from '@/services/weather';
 import { getExcursionPlan } from '@/services/ai';
 import { searchNatureSpotsNearby } from '@/services/nature-spots';
 import { LoadingScreen } from '@/components/loading-screen';
-import MinimalWeather from '@/components/minimal-weather';
-import type { ParsedIntent } from '@/types/intent';
+import { Send, Leaf, ArrowLeft } from 'lucide-react-native';
+import { sendMessage as sendChatMessage, getOrCreateSession } from '@/services/chat';
+import type { ChatMessage } from '@/types/ai';
 
-const ACTIVITY_OPTIONS = [
-  'Walking',
-  'Hiking',
-  'Meditation',
-  'Birdwatching',
-  'Photography',
-  'Forest Bathing',
-  'Yoga',
-  'Running',
-];
+interface Message {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+}
 
-const THERAPEUTIC_OPTIONS = [
-  'Stress Relief',
-  'Anxiety Reduction',
-  'Mood Enhancement',
-  'Sleep Improvement',
-  'Focus & Clarity',
-  'Energy Boost',
-  'Pain Management',
-  'Mindfulness',
-];
+const AI_GREETING = "Hi there! I'm your nature wellness guide. I can help you plan a personalized outdoor experience based on how you're feeling today. What kind of nature experience are you looking for? You can tell me things like how much time you have, what activities interest you, or what you'd like to get out of your time outdoors.";
 
-const RISK_TOLERANCE_OPTIONS = [
-  { value: 'low', label: 'Low', description: 'Safe and easy paths' },
-  { value: 'medium', label: 'Medium', description: 'Some challenge' },
-  { value: 'high', label: 'High', description: 'Adventurous routes' },
-];
-
-const ENERGY_LEVELS = [
-  { value: 'low', label: 'Low - Gentle pace' },
-  { value: 'medium', label: 'Medium - Moderate activity' },
-  { value: 'high', label: 'High - Vigorous activity' },
-];
-
-const DURATION_OPTIONS = [
-  { value: 15, label: '15 minutes' },
-  { value: 30, label: '30 minutes' },
-  { value: 45, label: '45 minutes' },
-  { value: 60, label: '1 hour' },
-  { value: 90, label: '1.5 hours' },
-  { value: 120, label: '2 hours' },
-];
-
-export default function CreateScreen() {
-  const params = useLocalSearchParams();
-  const [parsedIntent, setParsedIntent] = useState<ParsedIntent | null>(null);
-  const [selectedActivities, setSelectedActivities] = useState<string[]>([]);
-  const [selectedTherapeutic, setSelectedTherapeutic] = useState<string[]>([]);
-  const [riskTolerance, setRiskTolerance] = useState<string>('medium');
-  const [energyLevel, setEnergyLevel] = useState<string>('medium');
-  const [duration, setDuration] = useState<number>(30);
-  const [showRiskDropdown, setShowRiskDropdown] = useState(false);
-  const [showEnergyDropdown, setShowEnergyDropdown] = useState(false);
-  const [showDurationDropdown, setShowDurationDropdown] = useState(false);
-  const [showActivityOptions, setShowActivityOptions] = useState(false);
-  const [showTherapeuticOptions, setShowTherapeuticOptions] = useState(false);
+export default function ChatScreen() {
+  const [messages, setMessages] = useState<Message[]>([
+    { id: '0', role: 'assistant', content: AI_GREETING }
+  ]);
+  const [inputText, setInputText] = useState('');
+  const [sending, setSending] = useState(false);
   const [weather, setWeather] = useState<WeatherData | null>(null);
-  const [weatherLoading, setWeatherLoading] = useState(true);
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [additionalNotes, setAdditionalNotes] = useState('');
+  const [creatingExcursion, setCreatingExcursion] = useState(false);
+  const [sessionId, setSessionId] = useState<string | null>(null);
   const scrollViewRef = useRef<ScrollView>(null);
+  const inputRef = useRef<TextInput>(null);
 
   useEffect(() => {
-    console.log('Received params:', params);
-    if (params.intentData) {
-      try {
-        const intent = JSON.parse(params.intentData as string) as ParsedIntent;
-        console.log('Applying intent to form:', intent);
-        setParsedIntent(intent);
-
-        if (intent.durationMinutes) {
-          console.log('Setting duration to:', intent.durationMinutes);
-          setDuration(intent.durationMinutes);
-        }
-
-        if (intent.activities && intent.activities.length > 0) {
-          console.log('Setting activities to:', intent.activities);
-          setSelectedActivities(intent.activities);
-        }
-
-        if (intent.therapeuticGoals && intent.therapeuticGoals.length > 0) {
-          const mappedGoals = intent.therapeuticGoals.map(goal => {
-            const titleCase = goal.split(' ')
-              .map(w => w.charAt(0).toUpperCase() + w.slice(1))
-              .join(' ');
-            const goalMap: Record<string, string> = {
-              'Reduce Stress': 'Stress Relief',
-              'Improve Mood': 'Mood Enhancement',
-              'Boost Energy': 'Energy Boost',
-              'Improve Sleep': 'Sleep Improvement',
-              'Increase Focus': 'Focus & Clarity',
-              'Relax': 'Stress Relief',
-            };
-            return goalMap[titleCase] || titleCase;
-          });
-          console.log('Setting therapeutic goals to:', mappedGoals);
-          setSelectedTherapeutic(mappedGoals);
-        }
-
-        if (intent.difficulty) {
-          const riskLevel = intent.difficulty === 'easy' ? 'low' : intent.difficulty === 'hard' ? 'high' : 'medium';
-          console.log('Setting risk tolerance to:', riskLevel);
-          setRiskTolerance(riskLevel);
-        }
-      } catch (e) {
-        console.error('Failed to parse intent:', e);
-      }
-    }
-  }, [params.intentData]);
-
-  useEffect(() => {
-    loadUserPreferences();
-    loadWeather();
+    initializeChat();
+    loadLocationAndWeather();
   }, []);
 
-  useEffect(() => {
-    if (params.autoCreate === 'true' && location && !weatherLoading && !loading && parsedIntent) {
-      console.log('Auto-creating excursion from conversation');
-      setTimeout(() => {
-        handleCreateExcursion();
-      }, 500);
-    }
-  }, [params.autoCreate, location, weatherLoading, loading, parsedIntent]);
-
-  const loadUserPreferences = async () => {
-    if (params.intentData) {
-      return;
-    }
-
+  const initializeChat = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data } = await supabase
-        .from('user_profiles')
-        .select('activity_preferences, risk_tolerance')
-        .eq('user_id', user.id)
-        .maybeSingle();
-
-      if (data?.activity_preferences) {
-        setSelectedActivities(data.activity_preferences);
-      }
-      if (data?.risk_tolerance) {
-        setRiskTolerance(data.risk_tolerance);
+      const session = await getOrCreateSession('health_coach');
+      if (session) {
+        setSessionId(session.id);
       }
     } catch (error) {
-      console.error('Error loading preferences:', error);
+      console.error('Error initializing chat session:', error);
     }
   };
 
-  const loadWeather = async () => {
+  const loadLocationAndWeather = async () => {
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        setWeatherLoading(false);
-        return;
-      }
+      if (status !== 'granted') return;
 
       const currentLocation = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.Balanced,
       });
-
       setLocation(currentLocation);
 
       const weatherData = await getCurrentWeather(
         currentLocation.coords.latitude,
         currentLocation.coords.longitude
       );
-
       setWeather(weatherData);
-      setWeatherLoading(false);
     } catch (error) {
-      console.error('Error loading weather:', error);
-      setWeatherLoading(false);
+      console.error('Error loading location/weather:', error);
     }
   };
 
-  const toggleActivity = async (activity: string) => {
-    const newActivities = selectedActivities.includes(activity)
-      ? selectedActivities.filter(a => a !== activity)
-      : [...selectedActivities, activity];
-
-    setSelectedActivities(newActivities);
-
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      await supabase
-        .from('user_profiles')
-        .update({ activity_preferences: newActivities })
-        .eq('user_id', user.id);
-    } catch (error) {
-      console.error('Error saving preferences:', error);
-    }
+  const scrollToBottom = () => {
+    setTimeout(() => {
+      scrollViewRef.current?.scrollToEnd({ animated: true });
+    }, 100);
   };
 
-  const toggleTherapeutic = (option: string) => {
-    const newOptions = selectedTherapeutic.includes(option)
-      ? selectedTherapeutic.filter(o => o !== option)
-      : [...selectedTherapeutic, option];
+  const handleSend = async () => {
+    if (!inputText.trim() || sending) return;
 
-    setSelectedTherapeutic(newOptions);
-  };
+    const userMessage = inputText.trim();
+    setInputText('');
+    Keyboard.dismiss();
 
-  const updateRiskTolerance = async (value: string) => {
-    setRiskTolerance(value);
-    setShowRiskDropdown(false);
+    const newUserMessage: Message = {
+      id: Date.now().toString(),
+      role: 'user',
+      content: userMessage,
+    };
+
+    setMessages(prev => [...prev, newUserMessage]);
+    scrollToBottom();
+    setSending(true);
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      const conversationHistory: ChatMessage[] = messages.map(msg => ({
+        role: msg.role,
+        content: msg.content,
+      }));
 
-      await supabase
-        .from('user_profiles')
-        .update({ risk_tolerance: value })
-        .eq('user_id', user.id);
+      if (sessionId) {
+        const result = await sendChatMessage(sessionId, userMessage, conversationHistory, 'health_coach');
+
+        if (result.reply) {
+          const assistantMessage: Message = {
+            id: (Date.now() + 1).toString(),
+            role: 'assistant',
+            content: result.reply,
+          };
+          setMessages(prev => [...prev, assistantMessage]);
+          scrollToBottom();
+        }
+      } else {
+        const assistantMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          role: 'assistant',
+          content: "I'd be happy to help you plan a nature experience! Tell me more about what you're looking for - how much time do you have, and what kind of activity sounds appealing?",
+        };
+        setMessages(prev => [...prev, assistantMessage]);
+        scrollToBottom();
+      }
     } catch (error) {
-      console.error('Error saving risk tolerance:', error);
+      console.error('Error sending message:', error);
+      const errorMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content: "I'm having trouble connecting right now. Would you like to tell me more about your ideal nature experience?",
+      };
+      setMessages(prev => [...prev, errorMessage]);
+      scrollToBottom();
+    } finally {
+      setSending(false);
     }
   };
 
   const handleCreateExcursion = async () => {
-    Keyboard.dismiss();
-
     if (!location) {
-      setError('Location not available. Please enable location permissions.');
+      const errorMessage: Message = {
+        id: Date.now().toString(),
+        role: 'assistant',
+        content: "I need your location to find nature spots nearby. Please enable location permissions and try again.",
+      };
+      setMessages(prev => [...prev, errorMessage]);
+      scrollToBottom();
       return;
     }
 
-    setLoading(true);
-    setError(null);
+    setCreatingExcursion(true);
 
     try {
-      const perfStart = Date.now();
-      const perfMarks: Record<string, number> = {};
-      const mark = (label: string) => {
-        perfMarks[label] = Date.now();
-        console.log(`[PERF] ${label}: ${Date.now() - perfStart}ms`);
-      };
-
-      console.log('Starting excursion creation...');
-      mark('start');
-
       const { data: { user } } = await supabase.auth.getUser();
-      mark('auth_complete');
       if (!user) {
-        setError('Please sign in to create an excursion.');
-        setLoading(false);
+        setCreatingExcursion(false);
+        const errorMessage: Message = {
+          id: Date.now().toString(),
+          role: 'assistant',
+          content: "Please sign in to create an excursion.",
+        };
+        setMessages(prev => [...prev, errorMessage]);
         return;
       }
 
-      console.log('User authenticated, fetching nearby places...');
       const nearbyResult = await searchNatureSpotsNearby(
         location.coords.latitude,
         location.coords.longitude,
         5
       );
-      mark('places_fetched');
 
       const nearbyPlaces = nearbyResult.places.map(place => ({
         name: place.name,
@@ -293,82 +186,68 @@ export default function CreateScreen() {
         star_rating: place.star_rating,
       }));
 
-      console.log('Found nearby places:', nearbyPlaces.length);
-
       if (nearbyPlaces.length === 0) {
-        setError('No nearby nature spots found. Do you know anywhere we can do this? Try moving to a different location or adjusting your preferences.');
-        setLoading(false);
+        setCreatingExcursion(false);
+        const errorMessage: Message = {
+          id: Date.now().toString(),
+          role: 'assistant',
+          content: "I couldn't find any nature spots nearby. Try moving to a different location.",
+        };
+        setMessages(prev => [...prev, errorMessage]);
         return;
       }
 
-      const preferences = {
-        activities: selectedActivities,
-        therapeutic: selectedTherapeutic,
-        riskTolerance,
-        energyLevel,
-        additionalNotes: additionalNotes.trim() || undefined,
-        weather: weather ? {
-          temp: weather.temperature,
-          condition: weather.description,
-        } : undefined,
-      };
+      const conversationContext = messages
+        .filter(m => m.role === 'user')
+        .map(m => m.content)
+        .join(' ');
 
-      console.log('Calling AI to create excursion plan...');
       const result = await getExcursionPlan({
         userLocation: {
           lat: location.coords.latitude,
           lng: location.coords.longitude,
         },
-        durationMinutes: duration,
-        preferences,
+        durationMinutes: 30,
+        preferences: {
+          activities: [],
+          therapeutic: [],
+          riskTolerance: 'medium',
+          energyLevel: 'medium',
+          additionalNotes: conversationContext,
+          weather: weather ? {
+            temp: weather.temperature,
+            condition: weather.description,
+          } : undefined,
+        },
         nearbyPlaces,
       });
-      mark('ai_complete');
 
-      console.log('AI result:', result);
-
-      if (!result.ok || !result.result) {
-        const errorMsg = result.error?.message || 'Failed to create excursion. Please try again.';
-        console.error('AI error:', errorMsg);
-        setError(errorMsg);
-        setLoading(false);
+      if (!result.ok || !result.result || !result.result.destination) {
+        setCreatingExcursion(false);
+        const errorMessage: Message = {
+          id: Date.now().toString(),
+          role: 'assistant',
+          content: "I had trouble creating an excursion. Can you tell me more about what you're looking for?",
+        };
+        setMessages(prev => [...prev, errorMessage]);
         return;
       }
 
       const excursionData = result.result;
-      console.log('Excursion data:', excursionData);
-
-      if (!excursionData.destination) {
-        setError('Could not determine a destination. Please try again with different preferences.');
-        setLoading(false);
-        return;
-      }
-
       const startLat = location.coords.latitude;
       const startLng = location.coords.longitude;
       const destLat = excursionData.destination.lat;
       const destLng = excursionData.destination.lng;
 
-      const generateRouteToDestination = (
-        startLat: number,
-        startLng: number,
-        endLat: number,
-        endLng: number,
-        points: number = 8
-      ) => {
-        const waypoints = [];
-        for (let i = 0; i <= points; i++) {
-          const progress = i / points;
-          const lat = startLat + (endLat - startLat) * progress;
-          const lng = startLng + (endLng - startLng) * progress;
-          waypoints.push({ lat, lng });
-        }
-        return waypoints;
-      };
+      const routeWaypoints = [];
+      for (let i = 0; i <= 8; i++) {
+        const progress = i / 8;
+        routeWaypoints.push({
+          lat: startLat + (destLat - startLat) * progress,
+          lng: startLng + (destLng - startLng) * progress,
+        });
+      }
 
-      const routeWaypoints = generateRouteToDestination(startLat, startLng, destLat, destLng, 8);
-
-      console.log('Saving to database...');
       const { data: insertedData, error: dbError } = await supabase
         .from('excursions')
         .insert({
@@ -377,10 +256,7 @@ export default function CreateScreen() {
           description: excursionData.description,
           route_data: {
             steps: excursionData.steps,
-            start_location: {
-              lat: startLat,
-              lng: startLng,
-            },
+            start_location: { lat: startLat, lng: startLng },
             destination: {
               name: excursionData.destination.name,
               lat: destLat,
@@ -388,30 +264,25 @@ export default function CreateScreen() {
             },
             waypoints: routeWaypoints,
           },
-          duration_minutes: excursionData.duration_minutes || duration,
+          duration_minutes: excursionData.duration_minutes || 30,
           distance_km: excursionData.distance_km,
           difficulty: excursionData.difficulty,
         })
         .select('id')
         .single();
 
+      setCreatingExcursion(false);
+
       if (dbError || !insertedData) {
-        console.error('Database error:', dbError);
-        setError('Created excursion but failed to save. Please try again.');
-        setLoading(false);
+        const errorMessage: Message = {
+          id: Date.now().toString(),
+          role: 'assistant',
+          content: "I created an excursion but had trouble saving it. Please try again.",
+        };
+        setMessages(prev => [...prev, errorMessage]);
         return;
       }
 
-      console.log('Excursion saved with ID:', insertedData.id);
-      mark('db_saved');
-
-      const totalTime = Date.now() - perfStart;
-      console.log(`[PERF] Total excursion creation time: ${totalTime}ms (${(totalTime / 1000).toFixed(1)}s)`);
-      console.log('[PERF] Breakdown:', JSON.stringify(perfMarks, null, 2));
-
-      setLoading(false);
-
-      console.log('Navigating to detail page...');
       router.replace({
         pathname: '/(tabs)/explore/excursion-detail',
         params: {
@@ -420,273 +291,108 @@ export default function CreateScreen() {
           userLng: location.coords.longitude.toString(),
         },
       });
-    } catch (err) {
-      console.error('Error creating excursion:', err);
-      setError(`An unexpected error occurred: ${err instanceof Error ? err.message : 'Unknown error'}`);
-      setLoading(false);
+    } catch (error) {
+      console.error('Error creating excursion:', error);
+      setCreatingExcursion(false);
+      const errorMessage: Message = {
+        id: Date.now().toString(),
+        role: 'assistant',
+        content: "Something went wrong while creating your excursion. Please try again.",
+      };
+      setMessages(prev => [...prev, errorMessage]);
     }
   };
 
+  if (creatingExcursion) {
+    return <LoadingScreen message="Creating your personalized nature experience..." />;
+  }
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      {loading && (
-        <LoadingScreen message="Creating your personalized nature experience... This might take a minute..." />
-      )}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Create Excursion</Text>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+          <ArrowLeft size={24} color="#2D3E1F" />
+        </TouchableOpacity>
+        <View style={styles.headerContent}>
+          <View style={styles.headerIcon}>
+            <Leaf size={20} color="#4A7C2E" />
+          </View>
+          <Text style={styles.headerTitle}>Nature Guide</Text>
+        </View>
+        <View style={styles.headerSpacer} />
       </View>
 
       <KeyboardAvoidingView
-        style={styles.keyboardAvoidingView}
+        style={styles.keyboardView}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
       >
         <ScrollView
           ref={scrollViewRef}
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
+          style={styles.messagesContainer}
+          contentContainerStyle={styles.messagesContent}
+          onContentSizeChange={scrollToBottom}
           keyboardShouldPersistTaps="handled"
         >
-        <MinimalWeather weather={weather} loading={weatherLoading} />
+          {messages.map((message) => (
+            <View
+              key={message.id}
+              style={[
+                styles.messageBubble,
+                message.role === 'user' ? styles.userBubble : styles.assistantBubble,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.messageText,
+                  message.role === 'user' ? styles.userText : styles.assistantText,
+                ]}
+              >
+                {message.content}
+              </Text>
+            </View>
+          ))}
+          {sending && (
+            <View style={[styles.messageBubble, styles.assistantBubble]}>
+              <ActivityIndicator size="small" color="#4A7C2E" />
+            </View>
+          )}
+        </ScrollView>
 
-        {parsedIntent && (
-          <View style={styles.intentBanner}>
-            <Text style={styles.intentBannerText}>
-              Using your request: {parsedIntent.durationMinutes && `${parsedIntent.durationMinutes} min`}
-              {parsedIntent.activities && parsedIntent.activities.length > 0 && ` • ${parsedIntent.activities.join(', ')}`}
-              {parsedIntent.proximityBias !== 'none' && ` • ${parsedIntent.matches?.proximity || 'nearby'}`}
-            </Text>
-          </View>
+        {messages.length > 2 && (
+          <TouchableOpacity
+            style={styles.createButton}
+            onPress={handleCreateExcursion}
+            activeOpacity={0.8}
+          >
+            <Leaf size={20} color="#FFFFFF" />
+            <Text style={styles.createButtonText}>Create My Experience</Text>
+          </TouchableOpacity>
         )}
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Duration</Text>
-          <TouchableOpacity
-            style={styles.dropdown}
-            onPress={() => setShowDurationDropdown(!showDurationDropdown)}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.dropdownText}>
-              {DURATION_OPTIONS.find(opt => opt.value === duration)?.label}
-            </Text>
-            <Text style={styles.dropdownArrow}>{showDurationDropdown ? '▲' : '▼'}</Text>
-          </TouchableOpacity>
-          {showDurationDropdown && (
-            <View style={styles.dropdownMenu}>
-              {DURATION_OPTIONS.map((option) => (
-                <TouchableOpacity
-                  key={option.value}
-                  style={styles.dropdownItem}
-                  onPress={() => {
-                    setDuration(option.value);
-                    setShowDurationDropdown(false);
-                  }}
-                  activeOpacity={0.7}
-                >
-                  <Text style={[
-                    styles.dropdownItemText,
-                    duration === option.value && styles.dropdownItemTextSelected
-                  ]}>
-                    {option.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          )}
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Energy Level</Text>
-          <TouchableOpacity
-            style={styles.dropdown}
-            onPress={() => setShowEnergyDropdown(!showEnergyDropdown)}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.dropdownText}>
-              {ENERGY_LEVELS.find(lvl => lvl.value === energyLevel)?.label}
-            </Text>
-            <Text style={styles.dropdownArrow}>{showEnergyDropdown ? '▲' : '▼'}</Text>
-          </TouchableOpacity>
-          {showEnergyDropdown && (
-            <View style={styles.dropdownMenu}>
-              {ENERGY_LEVELS.map((level) => (
-                <TouchableOpacity
-                  key={level.value}
-                  style={styles.dropdownItem}
-                  onPress={() => {
-                    setEnergyLevel(level.value);
-                    setShowEnergyDropdown(false);
-                  }}
-                  activeOpacity={0.7}
-                >
-                  <Text style={[
-                    styles.dropdownItemText,
-                    energyLevel === level.value && styles.dropdownItemTextSelected
-                  ]}>
-                    {level.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          )}
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Risk Tolerance</Text>
-          <TouchableOpacity
-            style={styles.dropdown}
-            onPress={() => setShowRiskDropdown(!showRiskDropdown)}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.dropdownText}>
-              {RISK_TOLERANCE_OPTIONS.find(opt => opt.value === riskTolerance)?.label} - {RISK_TOLERANCE_OPTIONS.find(opt => opt.value === riskTolerance)?.description}
-            </Text>
-            <Text style={styles.dropdownArrow}>{showRiskDropdown ? '▲' : '▼'}</Text>
-          </TouchableOpacity>
-          {showRiskDropdown && (
-            <View style={styles.dropdownMenu}>
-              {RISK_TOLERANCE_OPTIONS.map((option) => (
-                <TouchableOpacity
-                  key={option.value}
-                  style={styles.dropdownItem}
-                  onPress={() => updateRiskTolerance(option.value)}
-                  activeOpacity={0.7}
-                >
-                  <Text style={[
-                    styles.dropdownItemText,
-                    riskTolerance === option.value && styles.dropdownItemTextSelected
-                  ]}>
-                    {option.label} - {option.description}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          )}
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Activity Preferences</Text>
-          <TouchableOpacity
-            style={styles.dropdown}
-            onPress={() => setShowActivityOptions(!showActivityOptions)}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.dropdownText}>
-              {selectedActivities.length > 0
-                ? `${selectedActivities.length} selected: ${selectedActivities.slice(0, 2).join(', ')}${selectedActivities.length > 2 ? '...' : ''}`
-                : 'Tap to select activities'}
-            </Text>
-            <Text style={styles.dropdownArrow}>{showActivityOptions ? '▲' : '▼'}</Text>
-          </TouchableOpacity>
-          {showActivityOptions && (
-            <View style={styles.expandedSection}>
-              <View style={styles.chipContainer}>
-                {ACTIVITY_OPTIONS.map((activity) => (
-                  <TouchableOpacity
-                    key={activity}
-                    style={[
-                      styles.chip,
-                      selectedActivities.includes(activity) && styles.chipSelected,
-                    ]}
-                    onPress={() => toggleActivity(activity)}
-                    activeOpacity={0.7}
-                  >
-                    <Text
-                      style={[
-                        styles.chipText,
-                        selectedActivities.includes(activity) && styles.chipTextSelected,
-                      ]}
-                    >
-                      {activity}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-          )}
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Therapeutic Goals</Text>
-          <TouchableOpacity
-            style={styles.dropdown}
-            onPress={() => setShowTherapeuticOptions(!showTherapeuticOptions)}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.dropdownText}>
-              {selectedTherapeutic.length > 0
-                ? `${selectedTherapeutic.length} selected: ${selectedTherapeutic.slice(0, 2).join(', ')}${selectedTherapeutic.length > 2 ? '...' : ''}`
-                : 'Tap to select goals'}
-            </Text>
-            <Text style={styles.dropdownArrow}>{showTherapeuticOptions ? '▲' : '▼'}</Text>
-          </TouchableOpacity>
-          {showTherapeuticOptions && (
-            <View style={styles.expandedSection}>
-              <View style={styles.chipContainer}>
-                {THERAPEUTIC_OPTIONS.map((option) => (
-                  <TouchableOpacity
-                    key={option}
-                    style={[
-                      styles.chip,
-                      selectedTherapeutic.includes(option) && styles.chipSelected,
-                    ]}
-                    onPress={() => toggleTherapeutic(option)}
-                    activeOpacity={0.7}
-                  >
-                    <Text
-                      style={[
-                        styles.chipText,
-                        selectedTherapeutic.includes(option) && styles.chipTextSelected,
-                      ]}
-                    >
-                      {option}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-          )}
-        </View>
-
-        {error && (
-          <View style={styles.errorContainer}>
-            <Text style={styles.errorText}>{error}</Text>
-          </View>
-        )}
-
-        <View style={styles.notesSection}>
-          <Text style={styles.notesTitle}>Anything else I should know?</Text>
+        <View style={styles.inputContainer}>
           <TextInput
-            style={styles.notesInput}
-            value={additionalNotes}
-            onChangeText={setAdditionalNotes}
-            onFocus={() => {
-              setTimeout(() => {
-                scrollViewRef.current?.scrollToEnd({ animated: true });
-              }, 300);
-            }}
-            placeholder="Add any special requests or considerations..."
+            ref={inputRef}
+            style={styles.input}
+            value={inputText}
+            onChangeText={setInputText}
+            placeholder="Tell me what you're looking for..."
             placeholderTextColor="#999"
             multiline
             maxLength={500}
-            textAlignVertical="top"
+            editable={!sending}
+            onSubmitEditing={handleSend}
+            blurOnSubmit={false}
           />
-          <Text style={styles.characterCount}>{additionalNotes.length}/500</Text>
+          <TouchableOpacity
+            style={[styles.sendButton, (!inputText.trim() || sending) && styles.sendButtonDisabled]}
+            onPress={handleSend}
+            disabled={!inputText.trim() || sending}
+            activeOpacity={0.7}
+          >
+            <Send size={20} color="#FFFFFF" />
+          </TouchableOpacity>
         </View>
-
-        <TouchableOpacity
-          style={[styles.createButton, loading && styles.createButtonDisabled]}
-          onPress={handleCreateExcursion}
-          disabled={loading || selectedActivities.length === 0}
-          activeOpacity={0.8}
-        >
-          {loading ? (
-            <ActivityIndicator size="small" color="#FFFFFF" />
-          ) : (
-            <Text style={styles.createButtonText}>Create Experience</Text>
-          )}
-        </TouchableOpacity>
-        </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -698,193 +404,132 @@ const styles = StyleSheet.create({
     backgroundColor: '#F5F8F3',
   },
   header: {
-    paddingHorizontal: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
     paddingVertical: 12,
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
   },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#2D3E1F',
+  backButton: {
+    padding: 4,
   },
-  keyboardAvoidingView: {
-    flex: 1,
+  headerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingBottom: 120,
-  },
-  intentBanner: {
-    marginHorizontal: 20,
-    marginTop: 16,
-    marginBottom: 8,
-    padding: 12,
+  headerIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: '#E8F5E9',
-    borderRadius: 8,
-    borderLeftWidth: 4,
-    borderLeftColor: '#4A7C2E',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  intentBannerText: {
-    fontSize: 14,
-    color: '#2D3E1F',
-    fontWeight: '500',
-  },
-  section: {
-    marginTop: 24,
-  },
-  sectionTitle: {
+  headerTitle: {
     fontSize: 18,
     fontWeight: '700',
     color: '#2D3E1F',
-    marginBottom: 4,
-    paddingHorizontal: 20,
   },
-  sectionSubtitle: {
-    fontSize: 14,
-    color: '#5A6C4A',
-    marginBottom: 16,
-    paddingHorizontal: 20,
+  headerSpacer: {
+    width: 32,
   },
-  chipContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  chip: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 20,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 2,
-    borderColor: '#E5E7EB',
-  },
-  chipSelected: {
-    backgroundColor: '#4A7C2E',
-    borderColor: '#4A7C2E',
-  },
-  chipText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#5A6C4A',
-  },
-  chipTextSelected: {
-    color: '#FFFFFF',
-  },
-  dropdown: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginHorizontal: 20,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 2,
-    borderColor: '#E5E7EB',
-  },
-  dropdownText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#2D3E1F',
+  keyboardView: {
     flex: 1,
   },
-  dropdownArrow: {
-    fontSize: 12,
-    color: '#5A6C4A',
-    marginLeft: 8,
+  messagesContainer: {
+    flex: 1,
   },
-  dropdownMenu: {
-    marginHorizontal: 20,
-    marginTop: 8,
-    borderRadius: 12,
+  messagesContent: {
+    padding: 16,
+    paddingBottom: 8,
+  },
+  messageBubble: {
+    maxWidth: '85%',
+    marginBottom: 12,
+    padding: 14,
+    borderRadius: 18,
+  },
+  userBubble: {
+    alignSelf: 'flex-end',
+    backgroundColor: '#4A7C2E',
+    borderBottomRightRadius: 4,
+  },
+  assistantBubble: {
+    alignSelf: 'flex-start',
     backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    overflow: 'hidden',
+    borderBottomLeftRadius: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
-  dropdownItem: {
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F5F8F3',
-  },
-  dropdownItemText: {
+  messageText: {
     fontSize: 15,
+    lineHeight: 22,
+  },
+  userText: {
+    color: '#FFFFFF',
+  },
+  assistantText: {
     color: '#2D3E1F',
   },
-  dropdownItemTextSelected: {
-    color: '#4A7C2E',
-    fontWeight: '700',
-  },
-  expandedSection: {
-    marginTop: 12,
-    paddingHorizontal: 20,
-  },
   createButton: {
-    marginHorizontal: 20,
-    marginTop: 32,
-    paddingVertical: 16,
-    borderRadius: 12,
-    backgroundColor: '#4A7C2E',
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    marginHorizontal: 16,
+    marginBottom: 12,
+    paddingVertical: 14,
+    backgroundColor: '#7FA957',
+    borderRadius: 24,
+    gap: 8,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  createButtonDisabled: {
-    opacity: 0.6,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   createButtonText: {
     fontSize: 16,
     fontWeight: '700',
     color: '#FFFFFF',
   },
-  errorContainer: {
-    marginHorizontal: 20,
-    marginTop: 16,
-    padding: 12,
-    borderRadius: 8,
-    backgroundColor: '#FEE',
-    borderWidth: 1,
-    borderColor: '#FCC',
-  },
-  errorText: {
-    fontSize: 14,
-    color: '#C00',
-    textAlign: 'center',
-  },
-  notesSection: {
-    marginTop: 24,
-    marginBottom: 16,
-    marginHorizontal: 20,
-  },
-  notesTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#2D3E1F',
-    marginBottom: 12,
-  },
-  notesInput: {
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    paddingBottom: Platform.OS === 'ios' ? 12 : 12,
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+    gap: 12,
+  },
+  input: {
+    flex: 1,
+    minHeight: 44,
+    maxHeight: 120,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: '#F5F8F3',
+    borderRadius: 22,
     fontSize: 15,
     color: '#2D3E1F',
-    borderWidth: 2,
-    borderColor: '#E5E7EB',
-    minHeight: 120,
   },
-  characterCount: {
-    fontSize: 12,
-    color: '#999',
-    textAlign: 'right',
-    marginTop: 8,
+  sendButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#4A7C2E',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  sendButtonDisabled: {
+    opacity: 0.5,
   },
 });
