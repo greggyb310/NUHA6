@@ -1,10 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, ImageBackground, Image, ActivityIndicator, ImageSourcePropType, TouchableOpacity, ScrollView, TextInput, KeyboardAvoidingView, Platform, Keyboard } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
 import { supabase } from '@/services/supabase';
 import { LinearGradient } from 'expo-linear-gradient';
-import { MessageCircle, Send, X, ChevronDown } from 'lucide-react-native';
+import { MessageCircle, Send } from 'lucide-react-native';
 import { sendMessage as sendChatMessage, getOrCreateSession } from '@/services/chat';
 import type { ChatMessage } from '@/types/ai';
 
@@ -43,20 +42,18 @@ interface Message {
 
 const getFirstTimeGreeting = (name?: string) => {
   const greeting = name ? `Hi ${name}!` : "Hi!";
-  return `${greeting} I'm your nature wellness guide. What would you like to do today?`;
+  return `${greeting} Ready to explore nature?`;
 };
 
 const getReturningGreeting = (name?: string) => {
   const greeting = name ? `Hi ${name}!` : "Hi!";
-  return `${greeting} What would you like to do today? Let me know how long you have and anything else that I should know when we plan your excursion.`;
+  return `${greeting} What would you like to do today?`;
 };
 
 export default function HomeScreen() {
-  const router = useRouter();
   const [photo, setPhoto] = useState<InspirationPhoto | null>(null);
   const [quote, setQuote] = useState<InspirationQuote | null>(null);
   const [loading, setLoading] = useState(true);
-  const [chatExpanded, setChatExpanded] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
   const [sending, setSending] = useState(false);
@@ -204,15 +201,6 @@ export default function HomeScreen() {
     }
   };
 
-  const toggleChat = () => {
-    setChatExpanded(!chatExpanded);
-    if (!chatExpanded) {
-      setTimeout(() => {
-        scrollToBottom();
-      }, 300);
-    }
-  };
-
   const backgroundImage = photo && IMAGE_MAP[photo.image_url]
     ? IMAGE_MAP[photo.image_url]
     : require('@/assets/images/img_6096_large_medium.jpeg');
@@ -241,89 +229,73 @@ export default function HomeScreen() {
           </View>
 
           <View style={styles.centerSection}>
-            {!chatExpanded ? (
-              <TouchableOpacity
-                style={styles.chatButton}
-                onPress={toggleChat}
-                activeOpacity={0.8}
-              >
-                <MessageCircle size={28} color="#FFFFFF" />
-                <Text style={styles.chatButtonText}>Let's talk</Text>
-              </TouchableOpacity>
-            ) : (
-              <KeyboardAvoidingView
-                style={styles.chatContainer}
-                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-              >
-                <View style={styles.chatCard}>
-                  <View style={styles.chatHeader}>
-                    <View style={styles.chatHeaderLeft}>
-                      <MessageCircle size={20} color="#4A7C2E" />
-                      <Text style={styles.chatHeaderTitle}>Nature Guide</Text>
-                    </View>
-                    <TouchableOpacity onPress={toggleChat} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-                      <ChevronDown size={24} color="#2D3E1F" />
-                    </TouchableOpacity>
-                  </View>
+            <KeyboardAvoidingView
+              style={styles.chatContainer}
+              behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            >
+              <View style={styles.chatCard}>
+                <View style={styles.chatHeader}>
+                  <MessageCircle size={20} color="#4A7C2E" />
+                  <Text style={styles.chatHeaderTitle}>Nature Guide</Text>
+                </View>
 
-                  <ScrollView
-                    ref={scrollViewRef}
-                    style={styles.messagesContainer}
-                    contentContainerStyle={styles.messagesContent}
-                    onContentSizeChange={scrollToBottom}
-                    keyboardShouldPersistTaps="handled"
-                  >
-                    {messages.map((message) => (
-                      <View
-                        key={message.id}
+                <ScrollView
+                  ref={scrollViewRef}
+                  style={styles.messagesContainer}
+                  contentContainerStyle={styles.messagesContent}
+                  onContentSizeChange={scrollToBottom}
+                  keyboardShouldPersistTaps="handled"
+                >
+                  {messages.map((message) => (
+                    <View
+                      key={message.id}
+                      style={[
+                        styles.messageBubble,
+                        message.role === 'user' ? styles.userBubble : styles.assistantBubble,
+                      ]}
+                    >
+                      <Text
                         style={[
-                          styles.messageBubble,
-                          message.role === 'user' ? styles.userBubble : styles.assistantBubble,
+                          styles.messageText,
+                          message.role === 'user' ? styles.userText : styles.assistantText,
                         ]}
                       >
-                        <Text
-                          style={[
-                            styles.messageText,
-                            message.role === 'user' ? styles.userText : styles.assistantText,
-                          ]}
-                        >
-                          {message.content}
-                        </Text>
-                      </View>
-                    ))}
-                    {sending && (
-                      <View style={[styles.messageBubble, styles.assistantBubble]}>
-                        <ActivityIndicator size="small" color="#4A7C2E" />
-                      </View>
-                    )}
-                  </ScrollView>
+                        {message.content}
+                      </Text>
+                    </View>
+                  ))}
+                  {sending && (
+                    <View style={[styles.messageBubble, styles.assistantBubble]}>
+                      <ActivityIndicator size="small" color="#4A7C2E" />
+                    </View>
+                  )}
+                </ScrollView>
 
-                  <View style={styles.inputContainer}>
-                    <TextInput
-                      ref={inputRef}
-                      style={styles.input}
-                      value={inputText}
-                      onChangeText={setInputText}
-                      placeholder="Tell me what you're looking for..."
-                      placeholderTextColor="rgba(255,255,255,0.6)"
-                      multiline
-                      maxLength={500}
-                      editable={!sending}
-                      onSubmitEditing={handleSend}
-                      blurOnSubmit={false}
-                    />
-                    <TouchableOpacity
-                      style={[styles.sendButton, (!inputText.trim() || sending) && styles.sendButtonDisabled]}
-                      onPress={handleSend}
-                      disabled={!inputText.trim() || sending}
-                      activeOpacity={0.7}
-                    >
-                      <Send size={18} color="#FFFFFF" />
-                    </TouchableOpacity>
-                  </View>
+                <View style={styles.inputContainer}>
+                  <TextInput
+                    ref={inputRef}
+                    style={styles.input}
+                    value={inputText}
+                    onChangeText={setInputText}
+                    placeholder="Tell me what you're looking for..."
+                    placeholderTextColor="rgba(45, 62, 31, 0.5)"
+                    multiline
+                    maxLength={500}
+                    editable={!sending}
+                    onSubmitEditing={handleSend}
+                    blurOnSubmit={false}
+                  />
+                  <TouchableOpacity
+                    style={[styles.sendButton, (!inputText.trim() || sending) && styles.sendButtonDisabled]}
+                    onPress={handleSend}
+                    disabled={!inputText.trim() || sending}
+                    activeOpacity={0.7}
+                  >
+                    <Send size={18} color="#FFFFFF" />
+                  </TouchableOpacity>
                 </View>
-              </KeyboardAvoidingView>
-            )}
+              </View>
+            </KeyboardAvoidingView>
           </View>
 
           <View style={styles.bottomSection}>
@@ -409,66 +381,35 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 32,
   },
-  chatButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(74, 124, 46, 0.9)',
-    paddingVertical: 18,
-    paddingHorizontal: 36,
-    borderRadius: 32,
-    gap: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 6,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
-  },
-  chatButtonText: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
   chatContainer: {
     width: '100%',
-    maxHeight: '70%',
   },
   chatCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    borderRadius: 24,
     overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 8,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.5)',
+    borderColor: 'rgba(255, 255, 255, 0.25)',
   },
   chatHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
     paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: 'rgba(232, 245, 233, 0.8)',
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(74, 124, 46, 0.1)',
-  },
-  chatHeaderLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    paddingVertical: 10,
+    backgroundColor: 'rgba(232, 245, 233, 0.25)',
     gap: 8,
   },
   chatHeaderTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#2D3E1F',
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    textShadowColor: 'rgba(0, 0, 0, 0.5)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
   messagesContainer: {
-    maxHeight: 300,
+    maxHeight: 240,
   },
   messagesContent: {
     padding: 12,
@@ -482,12 +423,12 @@ const styles = StyleSheet.create({
   },
   userBubble: {
     alignSelf: 'flex-end',
-    backgroundColor: '#4A7C2E',
+    backgroundColor: 'rgba(74, 124, 46, 0.9)',
     borderBottomRightRadius: 4,
   },
   assistantBubble: {
     alignSelf: 'flex-start',
-    backgroundColor: 'rgba(232, 245, 233, 0.9)',
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
     borderBottomLeftRadius: 4,
   },
   messageText: {
@@ -505,7 +446,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
     paddingHorizontal: 12,
     paddingVertical: 12,
-    backgroundColor: 'rgba(74, 124, 46, 0.1)',
+    backgroundColor: 'rgba(0, 0, 0, 0.15)',
     gap: 8,
   },
   input: {
@@ -514,12 +455,12 @@ const styles = StyleSheet.create({
     maxHeight: 100,
     paddingHorizontal: 14,
     paddingVertical: 10,
-    backgroundColor: 'rgba(255, 255, 255, 0.7)',
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
     borderRadius: 20,
     fontSize: 14,
     color: '#2D3E1F',
     borderWidth: 1,
-    borderColor: 'rgba(74, 124, 46, 0.2)',
+    borderColor: 'rgba(255, 255, 255, 0.3)',
   },
   sendButton: {
     width: 40,
@@ -528,6 +469,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#4A7C2E',
     justifyContent: 'center',
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3,
+    elevation: 3,
   },
   sendButtonDisabled: {
     opacity: 0.5,
