@@ -48,28 +48,30 @@ export default function HomeScreen() {
     try {
       setLoading(true);
 
-      const { data: photos } = await supabase
-        .from('inspiration_photos')
-        .select('*')
-        .eq('active', true);
+      const [photosResult, quotesResult] = await Promise.all([
+        supabase.from('inspiration_photos').select('*').eq('active', true),
+        supabase.from('inspiration_quotes').select('*').eq('active', true),
+      ]);
 
-      const { data: quotes } = await supabase
-        .from('inspiration_quotes')
-        .select('*')
-        .eq('active', true);
+      const { data: photos } = photosResult;
+      const { data: quotes } = quotesResult;
+
+      let newPhoto: InspirationPhoto | null = null;
+      let newQuote: InspirationQuote | null = null;
 
       if (photos && photos.length > 0) {
-        const randomPhoto = photos[Math.floor(Math.random() * photos.length)];
-        setPhoto(randomPhoto);
+        newPhoto = photos[Math.floor(Math.random() * photos.length)];
       }
 
       if (quotes && quotes.length > 0) {
-        const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
-        setQuote(randomQuote);
+        newQuote = quotes[Math.floor(Math.random() * quotes.length)];
       }
+
+      setPhoto(newPhoto);
+      setQuote(newQuote);
+      setLoading(false);
     } catch (error) {
       console.error('Error fetching inspiration:', error);
-    } finally {
       setLoading(false);
     }
   };
