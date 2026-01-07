@@ -2,14 +2,29 @@ import { useState } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Star } from 'lucide-react-native';
 import { supabase } from '@/services/supabase';
+import { syncExcursionToHealth } from '@/services/apple-health';
+import { getCurrentUser } from '@/services/auth';
+import { getUserProfile } from '@/services/user-profile';
 
 interface ExcursionFeedbackProps {
   excursionId: string;
   excursionTitle: string;
+  startTime: Date;
+  durationMinutes: number;
+  distanceKm?: number;
+  activityType?: string;
   onComplete: () => void;
 }
 
-export function ExcursionFeedback({ excursionId, excursionTitle, onComplete }: ExcursionFeedbackProps) {
+export function ExcursionFeedback({
+  excursionId,
+  excursionTitle,
+  startTime,
+  durationMinutes,
+  distanceKm,
+  activityType,
+  onComplete
+}: ExcursionFeedbackProps) {
   const [rating, setRating] = useState<number>(0);
   const [feedback, setFeedback] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -48,14 +63,17 @@ export function ExcursionFeedback({ excursionId, excursionTitle, onComplete }: E
         return;
       }
 
+      const completedAt = new Date();
       const { error: updateError } = await supabase
         .from('excursions')
-        .update({ completed_at: new Date().toISOString() })
+        .update({ completed_at: completedAt.toISOString() })
         .eq('id', excursionId);
 
       if (updateError) {
         console.error('Error updating excursion:', updateError);
       }
+
+      await syncToAppleHealth(completedAt);
 
       onComplete();
     } catch (err) {
@@ -65,12 +83,39 @@ export function ExcursionFeedback({ excursionId, excursionTitle, onComplete }: E
     }
   };
 
+  const syncToAppleHealth = async (completedAt: Date) => {
+    try {
+      const user = await getCurrentUser();
+      if (!user) return;
+
+      const profile = await getUserProfile(user.id);
+      if (!profile?.apple_health_enabled) return;
+
+      const endTime = completedAt;
+      const estimatedCalories = durationMinutes ? Math.round(durationMinutes * 4.5) : 0;
+
+      await syncExcursionToHealth({
+        title: excursionTitle,
+        startTime,
+        endTime,
+        distanceKm,
+        activityType,
+        estimatedCalories,
+      });
+    } catch (err) {
+      console.error('Error syncing to Apple Health:', err);
+    }
+  };
+
   const handleSkip = async () => {
     try {
+      const completedAt = new Date();
       await supabase
         .from('excursions')
-        .update({ completed_at: new Date().toISOString() })
+        .update({ completed_at: completedAt.toISOString() })
         .eq('id', excursionId);
+
+      await syncToAppleHealth(completedAt);
 
       onComplete();
     } catch (err) {

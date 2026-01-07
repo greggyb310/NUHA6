@@ -19,7 +19,13 @@
         "NSLocationWhenInUseUsageDescription": "This app needs your location to show nearby nature spots on the map.",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "This app needs your location to show nearby nature spots on the map.",
         "NSMicrophoneUsageDescription": "This app needs microphone access for voice conversations with your nature therapy coach.",
-        "NSFaceIDUsageDescription": "Enable Face ID to quickly and securely sign in to NatureUP Health."
+        "NSFaceIDUsageDescription": "Enable Face ID to quickly and securely sign in to NatureUP Health.",
+        "NSHealthShareUsageDescription": "NatureUP would like to read your activity data to personalize excursions and track your wellness progress.",
+        "NSHealthUpdateUsageDescription": "NatureUP would like to save your nature excursions as workouts and mindful minutes to Apple Health."
+      },
+      "entitlements": {
+        "com.apple.developer.healthkit": true,
+        "com.apple.developer.healthkit.access": []
       }
     },
     "android": {

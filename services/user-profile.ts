@@ -15,6 +15,9 @@ export interface UserProfile {
   preferences: Record<string, unknown> | null;
   risk_tolerance: string | null;
   chat_session_count: number | null;
+  apple_health_enabled: boolean | null;
+  apple_health_connected_at: string | null;
+  last_health_sync_at: string | null;
   created_at: string;
   updated_at: string;
 }

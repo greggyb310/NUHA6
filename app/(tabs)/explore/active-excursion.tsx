@@ -311,6 +311,10 @@ export default function ActiveExcursionScreen() {
         <ExcursionFeedback
           excursionId={id}
           excursionTitle={title}
+          startTime={new Date(startTime.current)}
+          durationMinutes={Math.round(elapsedTime / 60)}
+          distanceKm={excursion?.distance_km || undefined}
+          activityType={excursion?.difficulty || 'Walking'}
           onComplete={handleFeedbackComplete}
         />
       </Modal>

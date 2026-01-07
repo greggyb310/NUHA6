@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, ActivityIndicator, Switch, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { User, LogOut, Fingerprint } from 'lucide-react-native';
+import { User, LogOut, Fingerprint, Heart, Activity } from 'lucide-react-native';
 import { getCurrentUser, signOut } from '@/services/auth';
 import { getUserProfile, updateUserProfile } from '@/services/user-profile';
 import {
@@ -12,6 +12,13 @@ import {
   disableBiometric,
   BiometricCapabilities,
 } from '@/services/biometric-auth';
+import {
+  isHealthKitAvailable,
+  enableAppleHealth,
+  disableAppleHealth,
+  syncHealthMetricsToDatabase,
+  getRecentHealthSummary,
+} from '@/services/apple-health';
 import { LoadingScreen } from '@/components/loading-screen';
 
 const HEALTH_GOALS = [
@@ -67,6 +74,11 @@ export default function ProfileScreen() {
   const [password, setPassword] = useState('');
   const [biometricCapabilities, setBiometricCapabilities] = useState<BiometricCapabilities | null>(null);
   const [biometricEnabled, setBiometricEnabled] = useState(false);
+  const [appleHealthEnabled, setAppleHealthEnabled] = useState(false);
+  const [appleHealthConnectedAt, setAppleHealthConnectedAt] = useState<string | null>(null);
+  const [lastHealthSync, setLastHealthSync] = useState<string | null>(null);
+  const [healthSummary, setHealthSummary] = useState({ steps: 0, distance: 0, calories: 0 });
+  const [syncingHealth, setSyncingHealth] = useState(false);
 
   useEffect(() => {
     loadProfile();
@@ -96,12 +108,24 @@ export default function ProfileScreen() {
         setSelectedGoals(profile.health_goals || []);
         setSelectedActivities(profile.activity_preferences || []);
         setSelectedTherapies(profile.therapy_preferences || []);
+        setAppleHealthEnabled(profile.apple_health_enabled || false);
+        setAppleHealthConnectedAt(profile.apple_health_connected_at || null);
+        setLastHealthSync(profile.last_health_sync_at || null);
+
+        if (profile.apple_health_enabled) {
+          loadHealthSummary(user.id);
+        }
       }
     } catch (err) {
       setError('Failed to load profile');
     } finally {
       setLoading(false);
     }
+  };
+
+  const loadHealthSummary = async (userId: string) => {
+    const summary = await getRecentHealthSummary(userId, 7);
+    setHealthSummary(summary);
   };
 
   const checkBiometricAvailability = async () => {
@@ -112,6 +136,59 @@ export default function ProfileScreen() {
       const enabled = await isBiometricEnabled();
       setBiometricEnabled(enabled);
     }
+  };
+
+  const handleAppleHealthToggle = async (value: boolean) => {
+    const user = await getCurrentUser();
+    if (!user) {
+      setError('Authentication error');
+      return;
+    }
+
+    setError(null);
+
+    if (value) {
+      const result = await enableAppleHealth(user.id);
+      if (result.success) {
+        setAppleHealthEnabled(true);
+        setAppleHealthConnectedAt(new Date().toISOString());
+        setLastHealthSync(new Date().toISOString());
+        await loadHealthSummary(user.id);
+      } else {
+        setError(result.error || 'Failed to enable Apple Health');
+      }
+    } else {
+      const result = await disableAppleHealth(user.id);
+      if (result.success) {
+        setAppleHealthEnabled(false);
+        setAppleHealthConnectedAt(null);
+        setLastHealthSync(null);
+        setHealthSummary({ steps: 0, distance: 0, calories: 0 });
+      } else {
+        setError(result.error || 'Failed to disable Apple Health');
+      }
+    }
+  };
+
+  const handleManualSync = async () => {
+    const user = await getCurrentUser();
+    if (!user) {
+      setError('Authentication error');
+      return;
+    }
+
+    setSyncingHealth(true);
+    setError(null);
+
+    const result = await syncHealthMetricsToDatabase(user.id, 7);
+    if (result.success) {
+      setLastHealthSync(new Date().toISOString());
+      await loadHealthSummary(user.id);
+    } else {
+      setError(result.error || 'Failed to sync health data');
+    }
+
+    setSyncingHealth(false);
   };
 
   const handleBiometricToggle = async (value: boolean) => {
@@ -395,6 +472,87 @@ export default function ProfileScreen() {
             })}
           </View>
         </View>
+
+        {isHealthKitAvailable() && Platform.OS !== 'web' && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Apple Health</Text>
+            <Text style={styles.sectionDescription}>
+              Connect with Apple Health to track your nature excursions and personalize recommendations
+            </Text>
+
+            <View style={styles.card}>
+              <View style={styles.settingRow}>
+                <Heart size={20} color="#4A7C2E" />
+                <Text style={styles.settingLabel}>Apple Health</Text>
+                <Switch
+                  value={appleHealthEnabled}
+                  onValueChange={handleAppleHealthToggle}
+                  trackColor={{ false: '#E5E7EB', true: '#7FA957' }}
+                  thumbColor={appleHealthEnabled ? '#4A7C2E' : '#f4f3f4'}
+                />
+              </View>
+
+              {appleHealthEnabled && (
+                <>
+                  {appleHealthConnectedAt && (
+                    <View style={styles.healthInfoRow}>
+                      <Text style={styles.healthInfoLabel}>Connected</Text>
+                      <Text style={styles.healthInfoValue}>
+                        {new Date(appleHealthConnectedAt).toLocaleDateString()}
+                      </Text>
+                    </View>
+                  )}
+
+                  {lastHealthSync && (
+                    <View style={styles.healthInfoRow}>
+                      <Text style={styles.healthInfoLabel}>Last Sync</Text>
+                      <Text style={styles.healthInfoValue}>
+                        {new Date(lastHealthSync).toLocaleTimeString()}
+                      </Text>
+                    </View>
+                  )}
+
+                  <View style={styles.healthStatsContainer}>
+                    <View style={styles.healthStat}>
+                      <Activity size={16} color="#4A7C2E" />
+                      <Text style={styles.healthStatValue}>{healthSummary.steps.toLocaleString()}</Text>
+                      <Text style={styles.healthStatLabel}>Steps (7d)</Text>
+                    </View>
+
+                    <View style={styles.healthStat}>
+                      <Activity size={16} color="#4A7C2E" />
+                      <Text style={styles.healthStatValue}>
+                        {(healthSummary.distance / 1000).toFixed(1)}km
+                      </Text>
+                      <Text style={styles.healthStatLabel}>Distance</Text>
+                    </View>
+
+                    <View style={styles.healthStat}>
+                      <Activity size={16} color="#4A7C2E" />
+                      <Text style={styles.healthStatValue}>{Math.round(healthSummary.calories)}</Text>
+                      <Text style={styles.healthStatLabel}>Calories</Text>
+                    </View>
+                  </View>
+
+                  <TouchableOpacity
+                    style={styles.syncButton}
+                    onPress={handleManualSync}
+                    disabled={syncingHealth}
+                  >
+                    {syncingHealth ? (
+                      <ActivityIndicator size="small" color="#4A7C2E" />
+                    ) : (
+                      <>
+                        <Activity size={16} color="#4A7C2E" />
+                        <Text style={styles.syncButtonText}>Sync Now</Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
+                </>
+              )}
+            </View>
+          </View>
+        )}
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Security</Text>
@@ -745,5 +903,65 @@ const styles = StyleSheet.create({
     color: '#DC2626',
     fontSize: 14,
     fontWeight: '500',
+  },
+  healthInfoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: '#F5F8F3',
+    borderRadius: 8,
+    marginTop: 12,
+  },
+  healthInfoLabel: {
+    fontSize: 14,
+    color: '#5A6C4A',
+    fontWeight: '600',
+  },
+  healthInfoValue: {
+    fontSize: 14,
+    color: '#2D3E1F',
+  },
+  healthStatsContainer: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 16,
+  },
+  healthStat: {
+    flex: 1,
+    backgroundColor: '#F5F8F3',
+    borderRadius: 12,
+    padding: 12,
+    alignItems: 'center',
+    gap: 6,
+  },
+  healthStatValue: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#2D3E1F',
+    marginTop: 4,
+  },
+  healthStatLabel: {
+    fontSize: 11,
+    color: '#5A6C4A',
+    textAlign: 'center',
+  },
+  syncButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F5F8F3',
+    borderRadius: 12,
+    padding: 12,
+    marginTop: 16,
+    gap: 8,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  syncButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#4A7C2E',
   },
 });
