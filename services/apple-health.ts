@@ -54,24 +54,32 @@ export async function requestHealthPermissions(): Promise<{
   success: boolean;
   error?: string;
 }> {
+  console.log('requestHealthPermissions called, Platform.OS:', Platform.OS);
+
   if (!isHealthKitAvailable()) {
+    const message = Platform.OS === 'web'
+      ? 'Apple Health is only available on iOS devices. This is a web preview.'
+      : 'Apple Health is not available on this device';
+    console.log('HealthKit not available:', message);
     return {
       success: false,
-      error: 'Apple Health is only available on iOS devices',
+      error: message,
     };
   }
 
   return new Promise((resolve) => {
+    console.log('Initializing HealthKit with permissions...');
     AppleHealthKit.initHealthKit(HEALTH_PERMISSIONS, (error: string) => {
       if (error) {
         console.error('Error initializing HealthKit:', error);
         resolve({
           success: false,
-          error: String(error) || 'Failed to initialize Apple Health',
+          error: `HealthKit Error: ${String(error)}. Please open Settings > Privacy > Health and allow access for NatureUP.`,
         });
         return;
       }
 
+      console.log('HealthKit initialized successfully');
       resolve({ success: true });
     });
   });
@@ -364,12 +372,16 @@ export async function syncHealthMetricsToDatabase(
 export async function enableAppleHealth(
   userId: string
 ): Promise<{ success: boolean; error?: string }> {
+  console.log('enableAppleHealth called for user:', userId);
+
   const permissionResult = await requestHealthPermissions();
 
   if (!permissionResult.success) {
+    console.log('Permission request failed:', permissionResult.error);
     return permissionResult;
   }
 
+  console.log('Updating user profile with Apple Health enabled...');
   const { error } = await supabase
     .from('user_profiles')
     .update({
@@ -380,10 +392,15 @@ export async function enableAppleHealth(
 
   if (error) {
     console.error('Error updating profile:', error);
-    return { success: false, error: error.message };
+    return { success: false, error: `Database error: ${error.message}` };
   }
 
-  await syncHealthMetricsToDatabase(userId);
+  console.log('Profile updated successfully, syncing health data...');
+  const syncResult = await syncHealthMetricsToDatabase(userId);
+
+  if (!syncResult.success) {
+    console.warn('Initial sync failed, but connection established:', syncResult.error);
+  }
 
   return { success: true };
 }

@@ -79,6 +79,8 @@ export default function ProfileScreen() {
   const [lastHealthSync, setLastHealthSync] = useState<string | null>(null);
   const [healthSummary, setHealthSummary] = useState({ steps: 0, distance: 0, calories: 0 });
   const [syncingHealth, setSyncingHealth] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [togglingHealth, setTogglingHealth] = useState(false);
 
   useEffect(() => {
     loadProfile();
@@ -146,6 +148,8 @@ export default function ProfileScreen() {
     }
 
     setError(null);
+    setSuccessMessage(null);
+    setTogglingHealth(true);
 
     if (value) {
       const result = await enableAppleHealth(user.id);
@@ -154,8 +158,10 @@ export default function ProfileScreen() {
         setAppleHealthConnectedAt(new Date().toISOString());
         setLastHealthSync(new Date().toISOString());
         await loadHealthSummary(user.id);
+        setSuccessMessage('Apple Health connected successfully');
+        setTimeout(() => setSuccessMessage(null), 3000);
       } else {
-        setError(result.error || 'Failed to enable Apple Health');
+        setError(result.error || 'Failed to enable Apple Health. Please check your iOS Health app permissions.');
       }
     } else {
       const result = await disableAppleHealth(user.id);
@@ -164,10 +170,14 @@ export default function ProfileScreen() {
         setAppleHealthConnectedAt(null);
         setLastHealthSync(null);
         setHealthSummary({ steps: 0, distance: 0, calories: 0 });
+        setSuccessMessage('Apple Health disconnected');
+        setTimeout(() => setSuccessMessage(null), 3000);
       } else {
         setError(result.error || 'Failed to disable Apple Health');
       }
     }
+
+    setTogglingHealth(false);
   };
 
   const handleManualSync = async () => {
@@ -278,6 +288,8 @@ export default function ProfileScreen() {
       return;
     }
 
+    setSuccessMessage('Profile saved successfully');
+    setTimeout(() => setSuccessMessage(null), 3000);
     setSaving(false);
   };
 
@@ -484,12 +496,17 @@ export default function ProfileScreen() {
               <View style={styles.settingRow}>
                 <Heart size={20} color="#4A7C2E" />
                 <Text style={styles.settingLabel}>Apple Health</Text>
-                <Switch
-                  value={appleHealthEnabled}
-                  onValueChange={handleAppleHealthToggle}
-                  trackColor={{ false: '#E5E7EB', true: '#7FA957' }}
-                  thumbColor={appleHealthEnabled ? '#4A7C2E' : '#f4f3f4'}
-                />
+                {togglingHealth ? (
+                  <ActivityIndicator size="small" color="#4A7C2E" />
+                ) : (
+                  <Switch
+                    value={appleHealthEnabled}
+                    onValueChange={handleAppleHealthToggle}
+                    trackColor={{ false: '#E5E7EB', true: '#7FA957' }}
+                    thumbColor={appleHealthEnabled ? '#4A7C2E' : '#f4f3f4'}
+                    disabled={togglingHealth}
+                  />
+                )}
               </View>
 
               {appleHealthEnabled && (
@@ -603,8 +620,22 @@ export default function ProfileScreen() {
           </View>
         )}
 
-        <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-          <Text style={styles.saveButtonText}>Save Profile</Text>
+        {successMessage && (
+          <View style={styles.successContainer}>
+            <Text style={styles.successText}>{successMessage}</Text>
+          </View>
+        )}
+
+        <TouchableOpacity
+          style={[styles.saveButton, saving && styles.saveButtonDisabled]}
+          onPress={handleSave}
+          disabled={saving}
+        >
+          {saving ? (
+            <ActivityIndicator size="small" color="#FFFFFF" />
+          ) : (
+            <Text style={styles.saveButtonText}>Save Profile</Text>
+          )}
         </TouchableOpacity>
 
         <View style={styles.footer}>
@@ -778,11 +809,15 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderRadius: 28,
     alignItems: 'center',
+    justifyContent: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 8,
     elevation: 5,
+  },
+  saveButtonDisabled: {
+    backgroundColor: '#9CA3AF',
   },
   saveButtonText: {
     fontSize: 18,
@@ -903,6 +938,19 @@ const styles = StyleSheet.create({
     color: '#DC2626',
     fontSize: 14,
     fontWeight: '500',
+  },
+  successContainer: {
+    backgroundColor: '#D1FAE5',
+    padding: 12,
+    borderRadius: 8,
+    marginHorizontal: 20,
+    marginBottom: 16,
+  },
+  successText: {
+    color: '#065F46',
+    fontSize: 14,
+    fontWeight: '500',
+    textAlign: 'center',
   },
   healthInfoRow: {
     flexDirection: 'row',
