@@ -71,12 +71,8 @@ export async function saveCredentialsForBiometric(username: string, password: st
   }
 
   const credentials = JSON.stringify({ username, password });
-  await SecureStore.setItemAsync(CREDENTIALS_KEY, credentials, {
-    requireAuthentication: false,
-  });
-  await SecureStore.setItemAsync(BIOMETRIC_ENABLED_KEY, 'true', {
-    requireAuthentication: false,
-  });
+  await SecureStore.setItemAsync(CREDENTIALS_KEY, credentials);
+  await SecureStore.setItemAsync(BIOMETRIC_ENABLED_KEY, 'true');
 }
 
 export async function getStoredCredentials(): Promise<{ username: string; password: string } | null> {
@@ -85,9 +81,7 @@ export async function getStoredCredentials(): Promise<{ username: string; passwo
   }
 
   try {
-    const credentials = await SecureStore.getItemAsync(CREDENTIALS_KEY, {
-      requireAuthentication: false,
-    });
+    const credentials = await SecureStore.getItemAsync(CREDENTIALS_KEY);
     if (!credentials) {
       return null;
     }
@@ -103,9 +97,7 @@ export async function isBiometricEnabled(): Promise<boolean> {
     return false;
   }
 
-  const enabled = await SecureStore.getItemAsync(BIOMETRIC_ENABLED_KEY, {
-    requireAuthentication: false,
-  });
+  const enabled = await SecureStore.getItemAsync(BIOMETRIC_ENABLED_KEY);
   return enabled === 'true';
 }
 
