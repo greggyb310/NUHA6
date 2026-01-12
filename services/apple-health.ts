@@ -70,6 +70,18 @@ export async function requestHealthPermissions(): Promise<{
     };
   }
 
+  // Check if native module is properly loaded
+  if (!AppleHealthKit || !AppleHealthKit.initHealthKit || typeof AppleHealthKit.initHealthKit !== 'function') {
+    console.error('[HealthKit] Native module not properly initialized');
+    console.error('[HealthKit] AppleHealthKit object:', AppleHealthKit);
+    console.error('[HealthKit] initHealthKit function:', AppleHealthKit?.initHealthKit);
+
+    return {
+      success: false,
+      error: 'Native module error: The Apple Health native module is not available. This app needs to be rebuilt using EAS Build to include native HealthKit support. Preview builds from launch.expo.dev will not work with Apple Health.',
+    };
+  }
+
   return new Promise((resolve) => {
     let resolved = false;
     const timeout = setTimeout(() => {
@@ -115,9 +127,19 @@ export async function requestHealthPermissions(): Promise<{
         clearTimeout(timeout);
         resolved = true;
         console.error('[HealthKit] Exception during initHealthKit:', err);
+        const errorMessage = err instanceof Error ? err.message : String(err);
+
+        // Provide specific guidance based on error type
+        let helpfulMessage = 'Native module error: ';
+        if (errorMessage.includes('undefined is not a function') || errorMessage.includes('undefined is not an object')) {
+          helpfulMessage += 'The Apple Health native module is not available. This app must be rebuilt using EAS Build to include HealthKit support. Preview builds from launch.expo.dev and Expo Go do not support native modules like Apple Health.';
+        } else {
+          helpfulMessage += `${errorMessage}. The app may need to be rebuilt with EAS Build.`;
+        }
+
         resolve({
           success: false,
-          error: `Native module error: ${err instanceof Error ? err.message : String(err)}. The app may need to be rebuilt with EAS Build.`,
+          error: helpfulMessage,
         });
       }
     }

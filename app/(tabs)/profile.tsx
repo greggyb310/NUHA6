@@ -501,6 +501,12 @@ export default function ProfileScreen() {
               Connect with Apple Health to track your nature excursions and personalize recommendations
             </Text>
 
+            <View style={styles.infoBox}>
+              <Text style={styles.infoBoxText}>
+                Note: Apple Health requires a native build. If you see errors, please build the app using EAS Build instead of using the launch.expo.dev preview.
+              </Text>
+            </View>
+
             <View style={styles.card}>
               <View style={styles.settingRow}>
                 <Heart size={20} color="#4A7C2E" />
@@ -1029,5 +1035,18 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#4A7C2E',
+  },
+  infoBox: {
+    backgroundColor: '#FEF3C7',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 16,
+    borderLeftWidth: 4,
+    borderLeftColor: '#F59E0B',
+  },
+  infoBoxText: {
+    fontSize: 13,
+    color: '#92400E',
+    lineHeight: 18,
   },
 });
