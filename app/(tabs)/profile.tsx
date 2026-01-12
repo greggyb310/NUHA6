@@ -203,6 +203,11 @@ export default function ProfileScreen() {
 
   const handleBiometricToggle = async (value: boolean) => {
     if (value) {
+      if (!username || username.trim() === '') {
+        setError('Profile data missing. Please sign out and sign in again to enable biometric authentication.');
+        return;
+      }
+
       if (!password) {
         setError('Please enter your password to enable biometric authentication');
         return;
@@ -214,13 +219,17 @@ export default function ProfileScreen() {
         setBiometricEnabled(true);
         setPassword('');
         setError(null);
+        setSuccessMessage(`${biometricCapabilities?.biometricType || 'Biometric'} authentication enabled successfully`);
+        setTimeout(() => setSuccessMessage(null), 3000);
       } else {
-        setError(result.error || 'Failed to enable biometric authentication');
+        setError(result.error || 'Failed to enable biometric authentication. Please verify your password is correct.');
       }
     } else {
       await disableBiometric();
       setBiometricEnabled(false);
       setError(null);
+      setSuccessMessage(`${biometricCapabilities?.biometricType || 'Biometric'} authentication disabled`);
+      setTimeout(() => setSuccessMessage(null), 3000);
     }
   };
 
@@ -586,24 +595,33 @@ export default function ProfileScreen() {
                   onValueChange={handleBiometricToggle}
                   trackColor={{ false: '#E5E7EB', true: '#7FA957' }}
                   thumbColor={biometricEnabled ? '#4A7C2E' : '#f4f3f4'}
+                  disabled={!username || username.trim() === ''}
                 />
               </View>
 
-              {!biometricEnabled && (
+              {!username || username.trim() === '' ? (
                 <View style={styles.biometricPasswordSection}>
-                  <Text style={styles.biometricPasswordLabel}>
-                    Enter your password to enable {biometricCapabilities.biometricType}:
+                  <Text style={[styles.biometricPasswordLabel, { color: '#DC2626' }]}>
+                    Profile data is missing. Please sign out and sign in again to enable {biometricCapabilities.biometricType}.
                   </Text>
-                  <TextInput
-                    style={styles.biometricPasswordInput}
-                    placeholder="Password"
-                    placeholderTextColor="#9CA3AF"
-                    value={password}
-                    onChangeText={setPassword}
-                    secureTextEntry
-                    autoCapitalize="none"
-                  />
                 </View>
+              ) : (
+                !biometricEnabled && (
+                  <View style={styles.biometricPasswordSection}>
+                    <Text style={styles.biometricPasswordLabel}>
+                      Enter your password to enable {biometricCapabilities.biometricType}:
+                    </Text>
+                    <TextInput
+                      style={styles.biometricPasswordInput}
+                      placeholder="Password"
+                      placeholderTextColor="#9CA3AF"
+                      value={password}
+                      onChangeText={setPassword}
+                      secureTextEntry
+                      autoCapitalize="none"
+                    />
+                  </View>
+                )
               )}
             </>
           )}

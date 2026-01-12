@@ -54,13 +54,16 @@ export async function requestHealthPermissions(): Promise<{
   success: boolean;
   error?: string;
 }> {
-  console.log('requestHealthPermissions called, Platform.OS:', Platform.OS);
+  console.log('[HealthKit] requestHealthPermissions called');
+  console.log('[HealthKit] Platform.OS:', Platform.OS);
+  console.log('[HealthKit] AppleHealthKit module available:', !!AppleHealthKit);
+  console.log('[HealthKit] AppleHealthKit.Constants available:', !!AppleHealthKit.Constants);
 
   if (!isHealthKitAvailable()) {
     const message = Platform.OS === 'web'
       ? 'Apple Health is only available on iOS devices. This is a web preview.'
       : 'Apple Health is not available on this device';
-    console.log('HealthKit not available:', message);
+    console.log('[HealthKit] Not available:', message);
     return {
       success: false,
       error: message,
@@ -68,20 +71,56 @@ export async function requestHealthPermissions(): Promise<{
   }
 
   return new Promise((resolve) => {
-    console.log('Initializing HealthKit with permissions...');
-    AppleHealthKit.initHealthKit(HEALTH_PERMISSIONS, (error: string) => {
-      if (error) {
-        console.error('Error initializing HealthKit:', error);
+    let resolved = false;
+    const timeout = setTimeout(() => {
+      if (!resolved) {
+        resolved = true;
+        console.error('[HealthKit] TIMEOUT - HealthKit initialization took longer than 10 seconds');
         resolve({
           success: false,
-          error: `HealthKit Error: ${String(error)}. Please open Settings > Privacy > Health and allow access for NatureUP.`,
+          error: 'Connection timeout. The native HealthKit module may not be properly configured. Please rebuild the app using EAS Build.',
         });
-        return;
       }
+    }, 10000);
 
-      console.log('HealthKit initialized successfully');
-      resolve({ success: true });
-    });
+    console.log('[HealthKit] Calling initHealthKit...');
+    console.log('[HealthKit] Permissions config:', JSON.stringify(HEALTH_PERMISSIONS, null, 2));
+
+    try {
+      AppleHealthKit.initHealthKit(HEALTH_PERMISSIONS, (error: string) => {
+        if (resolved) {
+          console.log('[HealthKit] Callback fired after timeout, ignoring');
+          return;
+        }
+
+        clearTimeout(timeout);
+        resolved = true;
+
+        if (error) {
+          console.error('[HealthKit] Init error:', error);
+          console.error('[HealthKit] Error type:', typeof error);
+          console.error('[HealthKit] Error details:', JSON.stringify(error));
+          resolve({
+            success: false,
+            error: `HealthKit Error: ${String(error)}. Please open Settings > Privacy & Security > Health > NatureUP Health and enable all permissions.`,
+          });
+          return;
+        }
+
+        console.log('[HealthKit] Successfully initialized');
+        resolve({ success: true });
+      });
+    } catch (err) {
+      if (!resolved) {
+        clearTimeout(timeout);
+        resolved = true;
+        console.error('[HealthKit] Exception during initHealthKit:', err);
+        resolve({
+          success: false,
+          error: `Native module error: ${err instanceof Error ? err.message : String(err)}. The app may need to be rebuilt with EAS Build.`,
+        });
+      }
+    }
   });
 }
 
