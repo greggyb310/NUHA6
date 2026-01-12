@@ -501,12 +501,6 @@ export default function ProfileScreen() {
               Connect with Apple Health to track your nature excursions and personalize recommendations
             </Text>
 
-            <View style={styles.infoBox}>
-              <Text style={styles.infoBoxText}>
-                Note: Apple Health requires a native build. If you see errors, install the latest TestFlight build or rebuild with clear cache.
-              </Text>
-            </View>
-
             <View style={styles.card}>
               <View style={styles.settingRow}>
                 <Heart size={20} color="#4A7C2E" />
