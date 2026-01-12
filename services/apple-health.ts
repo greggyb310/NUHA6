@@ -1,9 +1,14 @@
 import { Platform } from 'react-native';
-import AppleHealthKit, {
-  HealthKitPermissions,
-  HealthValue,
-  HealthInputOptions,
-} from 'react-native-health';
+import {
+  isHealthDataAvailable,
+  requestAuthorization,
+  queryQuantitySamples,
+  saveWorkoutSample,
+  saveCategorySample,
+  HKWorkoutActivityType,
+  HKQuantityTypeIdentifier,
+  HKCategoryTypeIdentifier,
+} from '@kingstinct/react-native-healthkit';
 import { supabase } from './supabase';
 
 export interface HealthPermissions {
@@ -28,26 +33,32 @@ export interface WorkoutData {
   metadata?: Record<string, unknown>;
 }
 
-const HEALTH_PERMISSIONS: HealthKitPermissions = {
-  permissions: {
-    read: [
-      AppleHealthKit.Constants.Permissions.Steps,
-      AppleHealthKit.Constants.Permissions.DistanceWalkingRunning,
-      AppleHealthKit.Constants.Permissions.ActiveEnergyBurned,
-      AppleHealthKit.Constants.Permissions.HeartRate,
-      AppleHealthKit.Constants.Permissions.MindfulSession,
-      AppleHealthKit.Constants.Permissions.Workout,
-    ],
-    write: [
-      AppleHealthKit.Constants.Permissions.MindfulSession,
-      AppleHealthKit.Constants.Permissions.Workout,
-      AppleHealthKit.Constants.Permissions.ActiveEnergyBurned,
-    ],
-  },
-};
+const READ_TYPES = [
+  HKQuantityTypeIdentifier.stepCount,
+  HKQuantityTypeIdentifier.distanceWalkingRunning,
+  HKQuantityTypeIdentifier.activeEnergyBurned,
+  HKQuantityTypeIdentifier.heartRate,
+  HKCategoryTypeIdentifier.mindfulSession,
+  'HKWorkoutTypeIdentifier',
+] as const;
 
-export function isHealthKitAvailable(): boolean {
-  return Platform.OS === 'ios';
+const WRITE_TYPES = [
+  HKCategoryTypeIdentifier.mindfulSession,
+  'HKWorkoutTypeIdentifier',
+  HKQuantityTypeIdentifier.activeEnergyBurned,
+] as const;
+
+export async function isHealthKitAvailable(): Promise<boolean> {
+  if (Platform.OS !== 'ios') {
+    return false;
+  }
+
+  try {
+    const available = await isHealthDataAvailable();
+    return available;
+  } catch {
+    return false;
+  }
 }
 
 export async function requestHealthPermissions(): Promise<{
@@ -56,13 +67,12 @@ export async function requestHealthPermissions(): Promise<{
 }> {
   console.log('[HealthKit] requestHealthPermissions called');
   console.log('[HealthKit] Platform.OS:', Platform.OS);
-  console.log('[HealthKit] AppleHealthKit module available:', !!AppleHealthKit);
-  console.log('[HealthKit] AppleHealthKit.Constants available:', !!AppleHealthKit.Constants);
 
-  if (!isHealthKitAvailable()) {
-    const message = Platform.OS === 'web'
-      ? 'Apple Health is only available on iOS devices. This is a web preview.'
-      : 'Apple Health is not available on this device';
+  if (Platform.OS !== 'ios') {
+    const message =
+      Platform.OS === 'web'
+        ? 'Apple Health is only available on iOS devices. This is a web preview.'
+        : 'Apple Health is not available on this device';
     console.log('[HealthKit] Not available:', message);
     return {
       success: false,
@@ -70,213 +80,130 @@ export async function requestHealthPermissions(): Promise<{
     };
   }
 
-  // Check if native module is properly loaded
-  if (!AppleHealthKit || !AppleHealthKit.initHealthKit || typeof AppleHealthKit.initHealthKit !== 'function') {
-    console.error('[HealthKit] Native module not properly initialized');
-    console.error('[HealthKit] AppleHealthKit object:', AppleHealthKit);
-    console.error('[HealthKit] initHealthKit function:', AppleHealthKit?.initHealthKit);
+  try {
+    const available = await isHealthDataAvailable();
+    if (!available) {
+      return {
+        success: false,
+        error: 'Health data is not available on this device.',
+      };
+    }
 
+    await requestAuthorization(READ_TYPES, WRITE_TYPES);
+
+    console.log('[HealthKit] Successfully authorized');
+    return { success: true };
+  } catch (e) {
+    console.error('[HealthKit] Authorization error:', e);
+    const msg = e instanceof Error ? e.message : String(e);
     return {
       success: false,
-      error: 'Native module error: The Apple Health native module is not available. This app needs to be rebuilt using EAS Build to include native HealthKit support. Preview builds from launch.expo.dev will not work with Apple Health.',
+      error: `HealthKit authorization failed: ${msg}. Check Settings > Privacy & Security > Health.`,
     };
   }
-
-  return new Promise((resolve) => {
-    let resolved = false;
-    const timeout = setTimeout(() => {
-      if (!resolved) {
-        resolved = true;
-        console.error('[HealthKit] TIMEOUT - HealthKit initialization took longer than 10 seconds');
-        resolve({
-          success: false,
-          error: 'Connection timeout. The native HealthKit module may not be properly configured. Please rebuild the app using EAS Build.',
-        });
-      }
-    }, 10000);
-
-    console.log('[HealthKit] Calling initHealthKit...');
-    console.log('[HealthKit] Permissions config:', JSON.stringify(HEALTH_PERMISSIONS, null, 2));
-
-    try {
-      AppleHealthKit.initHealthKit(HEALTH_PERMISSIONS, (error: string) => {
-        if (resolved) {
-          console.log('[HealthKit] Callback fired after timeout, ignoring');
-          return;
-        }
-
-        clearTimeout(timeout);
-        resolved = true;
-
-        if (error) {
-          console.error('[HealthKit] Init error:', error);
-          console.error('[HealthKit] Error type:', typeof error);
-          console.error('[HealthKit] Error details:', JSON.stringify(error));
-          resolve({
-            success: false,
-            error: `HealthKit Error: ${String(error)}. Please open Settings > Privacy & Security > Health > NatureUP Health and enable all permissions.`,
-          });
-          return;
-        }
-
-        console.log('[HealthKit] Successfully initialized');
-        resolve({ success: true });
-      });
-    } catch (err) {
-      if (!resolved) {
-        clearTimeout(timeout);
-        resolved = true;
-        console.error('[HealthKit] Exception during initHealthKit:', err);
-        const errorMessage = err instanceof Error ? err.message : String(err);
-
-        // Provide specific guidance based on error type
-        let helpfulMessage = 'Native module error: ';
-        if (errorMessage.includes('undefined is not a function') || errorMessage.includes('undefined is not an object')) {
-          helpfulMessage += 'The Apple Health native module is not available. This app must be rebuilt using EAS Build to include HealthKit support. Preview builds from launch.expo.dev and Expo Go do not support native modules like Apple Health.';
-        } else {
-          helpfulMessage += `${errorMessage}. The app may need to be rebuilt with EAS Build.`;
-        }
-
-        resolve({
-          success: false,
-          error: helpfulMessage,
-        });
-      }
-    }
-  });
-}
-
-export async function checkHealthAuthorization(
-  permissionType: string
-): Promise<boolean> {
-  if (!isHealthKitAvailable()) {
-    return false;
-  }
-
-  return new Promise((resolve) => {
-    AppleHealthKit.getAuthStatus(
-      { type: permissionType } as any,
-      (error: string, result: any) => {
-        if (error || !result) {
-          resolve(false);
-          return;
-        }
-        resolve(true);
-      }
-    );
-  });
 }
 
 export async function getSteps(
   startDate: Date,
   endDate: Date = new Date()
 ): Promise<number> {
-  if (!isHealthKitAvailable()) {
+  if (!(await isHealthKitAvailable())) {
     return 0;
   }
 
-  return new Promise((resolve) => {
-    const options: HealthInputOptions = {
-      startDate: startDate.toISOString(),
-      endDate: endDate.toISOString(),
-    };
-
-    AppleHealthKit.getStepCount(options, (error: string, results: HealthValue) => {
-      if (error || !results) {
-        console.error('Error fetching steps:', error);
-        resolve(0);
-        return;
-      }
-      resolve(results.value);
+  try {
+    const samples = await queryQuantitySamples(HKQuantityTypeIdentifier.stepCount, {
+      from: startDate,
+      to: endDate,
     });
-  });
+
+    return samples.reduce((sum: number, s) => sum + (s.quantity ?? 0), 0);
+  } catch (error) {
+    console.error('Error fetching steps:', error);
+    return 0;
+  }
 }
 
 export async function getDistance(
   startDate: Date,
   endDate: Date = new Date()
 ): Promise<number> {
-  if (!isHealthKitAvailable()) {
+  if (!(await isHealthKitAvailable())) {
     return 0;
   }
 
-  return new Promise((resolve) => {
-    const options = {
-      startDate: startDate.toISOString(),
-      endDate: endDate.toISOString(),
-      unit: 'meter' as any,
-    };
-
-    AppleHealthKit.getDistanceWalkingRunning(options, (error: string, results: HealthValue) => {
-      if (error || !results) {
-        console.error('Error fetching distance:', error);
-        resolve(0);
-        return;
-      }
-      resolve(results.value);
+  try {
+    const samples = await queryQuantitySamples(HKQuantityTypeIdentifier.distanceWalkingRunning, {
+      from: startDate,
+      to: endDate,
     });
-  });
+
+    return samples.reduce((sum: number, s) => sum + (s.quantity ?? 0), 0);
+  } catch (error) {
+    console.error('Error fetching distance:', error);
+    return 0;
+  }
 }
 
 export async function getActiveCalories(
   startDate: Date,
   endDate: Date = new Date()
 ): Promise<number> {
-  if (!isHealthKitAvailable()) {
+  if (!(await isHealthKitAvailable())) {
     return 0;
   }
 
-  return new Promise((resolve) => {
-    const options = {
-      startDate: startDate.toISOString(),
-      endDate: endDate.toISOString(),
-      unit: 'kilocalorie' as any,
-    };
-
-    AppleHealthKit.getActiveEnergyBurned(options, (error: string, results: HealthValue[]) => {
-      if (error || !results || results.length === 0) {
-        console.error('Error fetching calories:', error);
-        resolve(0);
-        return;
-      }
-      resolve(results[0].value);
+  try {
+    const samples = await queryQuantitySamples(HKQuantityTypeIdentifier.activeEnergyBurned, {
+      from: startDate,
+      to: endDate,
     });
-  });
+
+    return samples.reduce((sum: number, s) => sum + (s.quantity ?? 0), 0);
+  } catch (error) {
+    console.error('Error fetching calories:', error);
+    return 0;
+  }
+}
+
+function toWorkoutActivityType(activity?: string): HKWorkoutActivityType {
+  const a = (activity ?? '').toLowerCase();
+  if (a.includes('hike')) return HKWorkoutActivityType.hiking;
+  if (a.includes('run')) return HKWorkoutActivityType.running;
+  return HKWorkoutActivityType.walking;
 }
 
 export async function saveWorkout(workout: WorkoutData): Promise<{
   success: boolean;
   error?: string;
 }> {
-  if (!isHealthKitAvailable()) {
+  if (!(await isHealthKitAvailable())) {
     return {
       success: false,
       error: 'Apple Health is only available on iOS devices',
     };
   }
 
-  return new Promise((resolve) => {
-    const workoutOptions = {
-      type: (workout.type || AppleHealthKit.Constants.Activities.Walking) as any,
-      startDate: workout.startDate.toISOString(),
-      endDate: workout.endDate.toISOString(),
-      energyBurned: workout.calories || 0,
-      distance: workout.distance || 0,
-    };
+  try {
+    const activityType =
+      typeof workout.type === 'string'
+        ? toWorkoutActivityType(workout.type)
+        : toWorkoutActivityType(String(workout.type));
 
-    AppleHealthKit.saveWorkout(workoutOptions, (error: string) => {
-      if (error) {
-        console.error('Error saving workout:', error);
-        resolve({
-          success: false,
-          error: String(error) || 'Failed to save workout',
-        });
-        return;
-      }
-
-      resolve({ success: true });
+    await saveWorkoutSample(activityType, [], workout.startDate, {
+      end: workout.endDate,
+      totals: {
+        energyBurned: workout.calories ?? 0,
+        distance: workout.distance ?? 0,
+      },
     });
-  });
+
+    return { success: true };
+  } catch (e) {
+    console.error('Error saving workout:', e);
+    const msg = e instanceof Error ? e.message : String(e);
+    return { success: false, error: msg || 'Failed to save workout' };
+  }
 }
 
 export async function saveMindfulMinutes(
@@ -286,35 +213,27 @@ export async function saveMindfulMinutes(
   success: boolean;
   error?: string;
 }> {
-  if (!isHealthKitAvailable()) {
+  if (!(await isHealthKitAvailable())) {
     return {
       success: false,
       error: 'Apple Health is only available on iOS devices',
     };
   }
 
-  return new Promise((resolve) => {
-    const endDate = new Date(startDate.getTime() + duration * 60 * 1000);
+  const endDate = new Date(startDate.getTime() + duration * 60 * 1000);
 
-    const mindfulOptions = {
-      value: duration,
-      startDate: startDate.toISOString(),
-      endDate: endDate.toISOString(),
-    } as any;
-
-    AppleHealthKit.saveMindfulSession(mindfulOptions, (error: string) => {
-      if (error) {
-        console.error('Error saving mindful session:', error);
-        resolve({
-          success: false,
-          error: String(error) || 'Failed to save mindful minutes',
-        });
-        return;
-      }
-
-      resolve({ success: true });
+  try {
+    await saveCategorySample(HKCategoryTypeIdentifier.mindfulSession, 0, {
+      start: startDate,
+      end: endDate,
     });
-  });
+
+    return { success: true };
+  } catch (e) {
+    console.error('Error saving mindful session:', e);
+    const msg = e instanceof Error ? e.message : String(e);
+    return { success: false, error: msg || 'Failed to save mindful minutes' };
+  }
 }
 
 export async function syncExcursionToHealth(excursionData: {
@@ -325,7 +244,7 @@ export async function syncExcursionToHealth(excursionData: {
   activityType?: string;
   estimatedCalories?: number;
 }): Promise<{ success: boolean; error?: string }> {
-  if (!isHealthKitAvailable()) {
+  if (!(await isHealthKitAvailable())) {
     return {
       success: false,
       error: 'Apple Health is only available on iOS devices',
@@ -337,15 +256,10 @@ export async function syncExcursionToHealth(excursionData: {
     1000 /
     60;
 
-  let workoutType = AppleHealthKit.Constants.Activities.Walking;
-  if (excursionData.activityType?.toLowerCase().includes('hike')) {
-    workoutType = AppleHealthKit.Constants.Activities.Hiking;
-  } else if (excursionData.activityType?.toLowerCase().includes('run')) {
-    workoutType = AppleHealthKit.Constants.Activities.Running;
-  }
+  const workoutType = toWorkoutActivityType(excursionData.activityType);
 
   const workoutResult = await saveWorkout({
-    type: workoutType,
+    type: String(workoutType),
     startDate: excursionData.startTime,
     endDate: excursionData.endTime,
     duration,

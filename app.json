@@ -24,8 +24,7 @@
         "NSHealthUpdateUsageDescription": "NatureUP would like to save your nature excursions as workouts and mindful minutes to Apple Health."
       },
       "entitlements": {
-        "com.apple.developer.healthkit": true,
-        "com.apple.developer.healthkit.access": []
+        "com.apple.developer.healthkit": true
       }
     },
     "android": {
@@ -46,13 +45,6 @@
         "expo-location",
         {
           "locationAlwaysAndWhenInUsePermission": "Allow this app to access your location to show nearby nature spots."
-        }
-      ],
-      [
-        "react-native-health",
-        {
-          "healthSharePermission": "NatureUP would like to read your activity data to personalize excursions and track your wellness progress.",
-          "healthUpdatePermission": "NatureUP would like to save your nature excursions as workouts and mindful minutes to Apple Health."
         }
       ]
     ],

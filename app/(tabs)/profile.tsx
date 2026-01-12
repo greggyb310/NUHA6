@@ -494,7 +494,7 @@ export default function ProfileScreen() {
           </View>
         </View>
 
-        {isHealthKitAvailable() && Platform.OS !== 'web' && (
+        {Platform.OS === 'ios' && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Apple Health</Text>
             <Text style={styles.sectionDescription}>
@@ -503,7 +503,7 @@ export default function ProfileScreen() {
 
             <View style={styles.infoBox}>
               <Text style={styles.infoBoxText}>
-                Note: Apple Health requires a native build. If you see errors, please build the app using EAS Build instead of using the launch.expo.dev preview.
+                Note: Apple Health requires a native build. If you see errors, install the latest TestFlight build or rebuild with clear cache.
               </Text>
             </View>
 
